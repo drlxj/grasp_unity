@@ -70,7 +70,7 @@ public class SimpleTestManager : MonoBehaviour
             {
                 initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
 
-                Debug.Log($"obj.transform.rotation:  {obj.transform.rotation}"); 
+                // Debug.Log($"obj.transform.rotation:  {obj.transform.rotation}"); 
 
             }
         }

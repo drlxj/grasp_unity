@@ -505,8 +505,8 @@ namespace Oculus.Interaction.HandGrab
             Pose pose;
             this.Hand.GetRootPose(out pose);
             this.PinchPoint.position = offset + pose.position; 
-            Debug.Log("pred offset: " + offset.ToString());
-            Debug.Log("pred object position: " + PinchPoint.position.ToString());
+            // Debug.Log("pred offset: " + offset.ToString());
+            // Debug.Log("pred object position: " + PinchPoint.position.ToString());
             
             
             WristToGrabPoseOffset = this.GetGrabOffset();

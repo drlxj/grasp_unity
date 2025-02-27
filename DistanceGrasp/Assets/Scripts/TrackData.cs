@@ -24,9 +24,9 @@ public class TrackData : MonoBehaviour
     private long packetId = 0;
 
     public GameObject[] allObjects;
-    private int gridSize = 2; // CHANGE
+    private int gridSize = 3; // CHANGE
     private float spacing = 0.3f; // CHANGE
-    private float depth = -3f; // CHANGE
+    private float depth = -4f; // CHANGE
 
     System.Random rng = new System.Random();
 
@@ -44,7 +44,7 @@ public class TrackData : MonoBehaviour
 
     private void Awake()
     {
-        Prefabs = Resources.LoadAll<GameObject>("PrefabTest");
+        Prefabs = Resources.LoadAll<GameObject>("Prefab");
         FisherYatesShuffle(Prefabs);
 
         Objects = new GameObject[gridSize * gridSize]; 
@@ -209,7 +209,7 @@ public class TrackData : MonoBehaviour
             message.jointPositions[i] = relativePosGlobal;
         }
 
-        Debug.Log($"message: {message}, root: {root}");
+        // Debug.Log($"message: {message}, root: {root}");
 
         message.objectStates = AddObjectsToTelemetryMessage(root, out string objInfo);
         //LogObjData(objInfo);

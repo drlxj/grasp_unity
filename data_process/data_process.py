@@ -71,7 +71,7 @@ def summarize_data(input_filename, output_detail_filename, output_path):
 
     return
 
-input_filename = "GraspingData_20250225_142319_B"
+input_filename = "GraspingData_20250227_092559_B"
 input_csv = f"../DistanceGrasp/Assets/LogData/{input_filename}.csv"
 output_path = f"./processed_data"
 output_detail_filename = process_detail_data(input_filename, input_csv, output_path)

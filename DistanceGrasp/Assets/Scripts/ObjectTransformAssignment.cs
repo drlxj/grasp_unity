@@ -143,7 +143,7 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             current_object.transform.rotation = rotation_unity;
             // current_object.transform.position = object_translation;
-            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
+            // Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
 
             // // === HAND JOINTS VISUALIZATION ===
             // List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
