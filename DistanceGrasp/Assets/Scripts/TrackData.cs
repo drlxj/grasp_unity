@@ -24,9 +24,9 @@ public class TrackData : MonoBehaviour
     private long packetId = 0;
 
     public GameObject[] allObjects;
-    private int gridSize = 3; // CHANGE
-    private float spacing = 0.3f; // CHANGE
-    private float depth = -4f; // CHANGE
+    public int gridSize = 3; // CHANGE
+    public float spacing = 0.1f; // CHANGE
+    public float depth = -5f; // CHANGE
 
     System.Random rng = new System.Random();
 

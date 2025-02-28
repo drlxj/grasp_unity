@@ -189,6 +189,169 @@ namespace Oculus.Interaction
             return true;
         }
 
+        public Vector3 getForward()
+        {
+            return Pose.forward;
+        }
+
+
+        public Vector3 getPosition()
+        {
+            return Pose.position;
+        }
+            
+
+        public bool HitsColliderGaussianPureHand(Collider collider, out float score, out Vector3 point)
+        {   
+            // get hand's(wrist) position and forward
+            Vector3 handPosition = Pose.position;
+            Vector3 handDirection = Pose.forward;
+            // int circleResolution = 8;
+            float sigma = 0.4f;
+
+            // get obect center
+            Vector3 centerPosition = collider.bounds.center;
+
+            // calculate the intersection of hand and plane
+            point = CalculateIntersection(handPosition, handDirection, centerPosition);
+
+            // DrawPoint(point);
+
+            // Debug.Log($"point++++: {point}");
+
+
+            score = CalculateGaussianProbability(point, centerPosition, sigma);
+
+            // Debug.Log($"score++++: {score}");
+
+            //DrawGaussianCircle(centerPosition, circleResolution, sigma);
+
+            if (score == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool HitsColliderGaussianHeadHand(Vector3 headPosition, Collider collider, out float score, out Vector3 point)
+        {   
+            // get hand's(wrist) position and forward
+            Vector3 handPosition = Pose.position;
+            Vector3 headHandDirection = handPosition - headPosition;
+            Vector3 normalizedHeadHandDirection = headHandDirection.normalized;
+
+            // int circleResolution = 8;
+            float sigma = 0.4f;
+
+            // get obect center
+            Vector3 centerPosition = collider.bounds.center;
+
+            // calculate the intersection of hand and plane
+            point = CalculateIntersection(handPosition, normalizedHeadHandDirection, centerPosition);
+
+            // DrawPoint(point);
+
+            // Debug.Log($"point++++: {point}");
+
+
+            score = CalculateGaussianProbability(point, centerPosition, sigma);
+
+            // Debug.Log($"score++++: {score}");
+
+            //DrawGaussianCircle(centerPosition, circleResolution, sigma);
+
+            if (score == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool HitsColliderGaussianBodyHand(Vector3 bodyPosition, Collider collider, out float score, out Vector3 point)
+        {   
+            // get hand's(wrist) position and forward
+            Vector3 handPosition = Pose.position;
+            Vector3 bodyHandDirection = handPosition - bodyPosition;
+            Vector3 normalizedBodyHandDirection = bodyHandDirection.normalized;
+
+            // int circleResolution = 8;
+            float sigma = 0.4f;
+
+            // get obect center
+            Vector3 centerPosition = collider.bounds.center;
+
+            // calculate the intersection of hand and plane
+            point = CalculateIntersection(handPosition, normalizedBodyHandDirection, centerPosition);
+
+            // DrawPoint(point);
+
+            // Debug.Log($"point++++: {point}");
+
+
+            score = CalculateGaussianProbability(point, centerPosition, sigma);
+
+            // Debug.Log($"score++++: {score}");
+
+            //DrawGaussianCircle(centerPosition, circleResolution, sigma);
+
+            if (score == 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+
+        private Vector3 CalculateIntersection(Vector3 handPosition, Vector3 handDirection, Vector3 centerPosition)
+        {
+            float planeY = centerPosition.y;
+
+
+            float lambda = (planeY - handPosition.y) / handDirection.y;
+            float x = handPosition.x + lambda * handDirection.x;
+            float z = handPosition.z + lambda * handDirection.z;
+            float y = centerPosition.y;
+
+            return new Vector3(x, planeY, z); // return intersection
+        }
+
+        private float CalculateGaussianProbability(Vector3 point, Vector3 mean, float sigma)
+        {
+            float exponent = -0.5f * Mathf.Pow(Vector3.Distance(point, mean) / sigma, 2);
+            return (1.0f / (Mathf.Sqrt(2 * Mathf.PI) * sigma)) * Mathf.Exp(exponent);
+        }
+
+        private void DrawPoint(Vector3 point)
+        {
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Renderer renderer = sphere.GetComponent<MeshRenderer>();
+            renderer.material.color = Color.red;
+            sphere.transform.position = point;
+            sphere.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f); 
+            Destroy(sphere, 0.3f);
+        }
+
+        private void DrawGaussianCircle(Vector3 center, int circleResolution, float sigma)
+        {
+            float step = 2 * Mathf.PI / circleResolution;
+
+            for (int i = 0; i < circleResolution; i++)
+            {
+                float angle = i * step;
+
+                Vector3 spherePosition = center + new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * sigma;
+
+                GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.transform.position = spherePosition;
+                sphere.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f); 
+            }
+        }
+
+
+
         public Vector3 NearestColliderHit(Collider collider, out float score)
         {
             Vector3 centerPosition = collider.bounds.center;

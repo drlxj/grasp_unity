@@ -61,6 +61,8 @@ def summarize_data(input_filename, output_detail_filename, output_path):
         ["AttemptCount_Variance", round(attempt_count_var, 6)]
     ]
 
+    print(f"round(catch_duration_mean, 6): {round(catch_duration_mean, 6)}")
+
     filename = f"{input_filename}_summary.csv"
     output_csv = os.path.join(output_path, filename)
     with open(output_csv, "w", newline="") as file:
@@ -71,7 +73,8 @@ def summarize_data(input_filename, output_detail_filename, output_path):
 
     return
 
-input_filename = "GraspingData_20250227_092559_B"
+# todo change file name
+input_filename = "GraspingData_20250228_151119_B"
 input_csv = f"../DistanceGrasp/Assets/LogData/{input_filename}.csv"
 output_path = f"./processed_data"
 output_detail_filename = process_detail_data(input_filename, input_csv, output_path)

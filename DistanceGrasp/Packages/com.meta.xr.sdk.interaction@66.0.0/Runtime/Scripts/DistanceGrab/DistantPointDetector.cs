@@ -122,23 +122,54 @@ namespace Oculus.Interaction
             bestHitPoint = Vector3.zero;
             bestScore = 0f;
             bool anyHit = false;
+        
 
             foreach (Collider collider in colliders)
             {
                 float score = 0f;
-                if (!searchFrustrum.HitsCollider(collider, out score, out Vector3 hitPoint))
+                // if (!searchFrustrum.HitsCollider(collider, out score, out Vector3 hitPoint))
+                // {
+                //     continue;
+                // }
+
+                // pure hand
+                // if (!searchFrustrum.HitsColliderGaussianPureHand(collider, out score, out Vector3 hitPoint))
+                // {
+                //     continue;
+                // }
+
+                // head-hand
+                // Vector3 headPosition = _frustums.AidFrustum.getPosition();
+                // if (!searchFrustrum.HitsColliderGaussianHeadHand(headPosition, collider, out score, out Vector3 hitPoint))
+                // {
+                //     continue;
+                // }
+                
+                // body-hand
+                Vector3 headPosition = _frustums.AidFrustum.getPosition();
+                Vector3 bodyPosition = new Vector3(headPosition.x, headPosition.y, headPosition.z- 0.2f);
+                if (!searchFrustrum.HitsColliderGaussianBodyHand(bodyPosition, collider, out score, out Vector3 hitPoint))
                 {
                     continue;
                 }
 
-                if (_frustums.AidFrustum != null)
-                {
-                    if (!_frustums.AidFrustum.HitsCollider(collider, out float headScore, out Vector3 headPosition))
-                    {
-                        continue;
-                    }
-                    score = score * (1f - _frustums.AidBlending) + headScore * _frustums.AidBlending;
-                }
+                // if (_frustums.AidFrustum != null)
+                // {
+                //     if (!_frustums.AidFrustum.HitsCollider(collider, out float headScore, out Vector3 headPosition))
+                //     {
+                //         continue;
+                //     }
+                //     score = score * (1f - _frustums.AidBlending) + headScore * _frustums.AidBlending;
+                // }
+
+                // if (_frustums.AidFrustum != null)
+                // {
+                //     if (!_frustums.AidFrustum.HitsColliderGaussian(collider, out float headScore, out Vector3 headPosition))
+                //     {
+                //         continue;
+                //     }
+                //     score = score * (1f - _frustums.AidBlending) + headScore * _frustums.AidBlending;
+                // }
 
                 // if (!_frustums.AidFrustum.HitsCollider(collider, out float headScore, out Vector3 headPosition))
                 // {
