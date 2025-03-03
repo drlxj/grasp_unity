@@ -115,7 +115,12 @@ namespace Oculus.Interaction
          Compute the best score of a single object from current view
          */
         public bool ComputeIsPointing(Collider[] colliders, bool isSelecting, out float bestScore, out Vector3 bestHitPoint)
-        {
+        {   
+            // if (colliders == null)
+            // {
+            //     Debug.LogError("ComputeIsPointing: colliders is NULL!");
+            // }
+
             ConicalFrustum searchFrustrum = (isSelecting || _frustums.DeselectionFrustum == null) ?
                 _frustums.SelectionFrustum : _frustums.DeselectionFrustum;
             // ConicalFrustum searchFrustrum = _frustums.SelectionFrustum;
@@ -139,19 +144,19 @@ namespace Oculus.Interaction
                 // }
 
                 // head-hand
-                // Vector3 headPosition = _frustums.AidFrustum.getPosition();
-                // if (!searchFrustrum.HitsColliderGaussianHeadHand(headPosition, collider, out score, out Vector3 hitPoint))
-                // {
-                //     continue;
-                // }
-                
-                // body-hand
                 Vector3 headPosition = _frustums.AidFrustum.getPosition();
-                Vector3 bodyPosition = new Vector3(headPosition.x, headPosition.y, headPosition.z- 0.2f);
-                if (!searchFrustrum.HitsColliderGaussianBodyHand(bodyPosition, collider, out score, out Vector3 hitPoint))
+                if (!searchFrustrum.HitsColliderGaussianHeadHand(headPosition, collider, out score, out Vector3 hitPoint))
                 {
                     continue;
                 }
+                
+                // body-hand
+                // Vector3 headPosition = _frustums.AidFrustum.getPosition();
+                // Vector3 bodyPosition = new Vector3(headPosition.x, headPosition.y, headPosition.z- 0.2f);
+                // if (!searchFrustrum.HitsColliderGaussianBodyHand(bodyPosition, collider, out score, out Vector3 hitPoint))
+                // {
+                //     continue;
+                // }
 
                 // if (_frustums.AidFrustum != null)
                 // {

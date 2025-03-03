@@ -13,7 +13,7 @@ class ObjectDataset(object):
       "files",
     )
     
-    self.ds_path = os.path.join(self.file_path, f"obj.npz")
+    self.ds_path = os.path.join(self.file_path, f"obj_hog.npz")
     self.load_or_create_datset()
     self.bps_basis = self.ds["bps_basis"][::4]
 
@@ -54,11 +54,13 @@ class ObjectDataset(object):
     import trimesh
     # bps processing for each object
     ds = {}
-    obj_fpaths = glob.glob("files/object_meshes/*.ply")
+    obj_fpaths = glob.glob(r"C:\Users\research\Documents\Xuejing Luo\grasping-unity\python\files\object_meshes_hog/*.obj")
+    count = 0
     for obj_fpath in obj_fpaths:
         base_name = os.path.basename(obj_fpath)
-        obj_name = base_name[:-4]
-
+        obj_name = base_name[3:-4]
+        obj_name = obj_name.replace("_","")
+        
         # Load mesh using trimesh
         mesh = trimesh.load_mesh(obj_fpath)
         

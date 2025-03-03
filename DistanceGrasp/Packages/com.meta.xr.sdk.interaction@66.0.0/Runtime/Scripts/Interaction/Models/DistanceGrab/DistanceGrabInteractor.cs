@@ -124,6 +124,7 @@ namespace Oculus.Interaction
         {
             DistanceGrabInteractable bestCandidate = _distantCandidateComputer.ComputeCandidate(
                 DistanceGrabInteractable.Registry, this, out Vector3 hitPoint);
+
             HitPoint = hitPoint;
             return bestCandidate;
         }

@@ -44,7 +44,7 @@ public class TrackData : MonoBehaviour
 
     private void Awake()
     {
-        Prefabs = Resources.LoadAll<GameObject>("Prefab");
+        Prefabs = Resources.LoadAll<GameObject>("PrefabHog");
         FisherYatesShuffle(Prefabs);
 
         Objects = new GameObject[gridSize * gridSize]; 
@@ -293,6 +293,7 @@ public class TrackData : MonoBehaviour
             objStates[i].orientation = Objects[i].transform.rotation;
             //objStates[i].objectType = Objects[i].GetComponent<ObjectProperties>().ObjectType;
             string objectTypeStr = Objects[i].name.ToUpper();
+            objectTypeStr = objectTypeStr.Replace("_", "");
             objStates[i].objectType = (ObjectType)Enum.Parse(typeof(ObjectType), objectTypeStr);
 
             //Debug.Log($"Object at index {i}: {objStates[i].objectType}");

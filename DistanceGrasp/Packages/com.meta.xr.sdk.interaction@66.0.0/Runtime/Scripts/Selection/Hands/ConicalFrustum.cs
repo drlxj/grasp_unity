@@ -285,7 +285,7 @@ namespace Oculus.Interaction
             // calculate the intersection of hand and plane
             point = CalculateIntersection(handPosition, normalizedBodyHandDirection, centerPosition);
 
-            // DrawPoint(point);
+            DrawPoint(point);
 
             // Debug.Log($"point++++: {point}");
 

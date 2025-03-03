@@ -71,7 +71,7 @@ public class ObjectTransformData
 public class ObjectTransformAssignment : MonoBehaviour
 {
     private GameObject[] objects;
-    private string fileName = "rotation_candidates";
+    private string fileName = "rotation_candidates_hog";
     private Dictionary<string, ObjectTransformData> transformData;
 
     // Start is called before the first frame update
@@ -97,7 +97,7 @@ public class ObjectTransformAssignment : MonoBehaviour
         
         transformData = JsonConvert.DeserializeObject<Dictionary<string, ObjectTransformData>>(jsonContent);
 
-        Debug.Log("Loaded transform candidates");
+        // Debug.Log("Loaded transform candidates");
        
     }
 
@@ -118,16 +118,19 @@ public class ObjectTransformAssignment : MonoBehaviour
            GameObject current_object = objects[i];
            string object_name = current_object.name;
 
+           object_name = object_name.Replace("_", "");
+
+        //    Debug.Log($"object_name: {object_name}");
+
             ObjectTransformData object_transform_set = transformData[object_name];
-      
 
             // int randomIndex = Random.Range(0, object_transform_set.seq_name.Count);
             int randomIndex = 0;
 
             List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 
-            List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
-            Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
+            // List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
+            // Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
 
             // Create a Matrix4x4 and populate its rotation component
             Matrix4x4 matrix_python = new Matrix4x4();
@@ -143,7 +146,7 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             current_object.transform.rotation = rotation_unity;
             // current_object.transform.position = object_translation;
-            // Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
+            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
 
             // // === HAND JOINTS VISUALIZATION ===
             // List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
