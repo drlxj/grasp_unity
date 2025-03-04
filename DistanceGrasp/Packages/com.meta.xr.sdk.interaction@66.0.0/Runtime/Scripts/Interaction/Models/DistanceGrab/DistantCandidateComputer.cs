@@ -221,6 +221,9 @@ namespace Oculus.Interaction
         /// <summary>
         /// Ours: ComputeBestInteractable() finds the best Interactable based on both shape and direction
         /// </summary>
+        /// 
+        private List<(TInteractable candidate, float candidateScore, Vector3 hitPoint, string candidateName, float gestureScore, float posScore, float GestureWeight)> candidateData 
+            = new List<(TInteractable, float, Vector3, string, float, float, float)>();
         private TInteractable ComputeBestInteractable(IEnumerable<TInteractable> candidates,
             bool narrowSearch, Dictionary<string, float> gestureProbability, out Vector3 bestHitPoint)
         {
@@ -235,44 +238,113 @@ namespace Oculus.Interaction
             bestHitPoint = Vector3.zero;
             candidateScores.Clear();
             candidateScores.Add($"{"Name",-15} {"Gesture",8} {"Pos",8} {"Weight",8} {"Final",8}");
-            foreach (TInteractable candidate in candidates)
+
+            // if it is not combi, use old method
+            if (GestureWeight != 0.5)
             {
-                // Get position score of the candidate
-                if (!_detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint))
-                    // check if user hand is in vision
+                foreach (TInteractable candidate in candidates)
                 {
-                    if (GestureWeight < 0.01) {
-                        // use unity method
+                    // Get position score of the candidate
+                    if (!_detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint))
+                        // check if user hand is in vision
+                    {
+                        if (GestureWeight < 0.01) {
+                            // use unity method
+                            continue;
+                        }
+                    }
+
+                    // Get shape score of the candidate
+                    DistanceHandGrabInteractable tmp = candidate as DistanceHandGrabInteractable;
+                    string name = tmp.GetObjName();
+                    float gestureScore = gestureProbability[name];
+
+                    // if (gestureScore < 0.65)
+                    // {
+                    //     gestureScore = 0.0f;
+                    // }
+                        
+                    // combination
+                    float finalScore = ComputeFinalScore(gestureScore, posScore, GestureWeight);
+                    // finalScore = gestureScore * posScore
+                    // marginal_probability = marginal_probability + gestureScore * posScore ;
+
+                    // candidateData.Add((candidate, finalScore, hitPoint));
+                    
+                    // Store scores for display
+                    candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {finalScore,8:F4}");
+
+                    if (finalScore > bestScore)
+                    {
+                        bestScore = finalScore;
+                        bestInteractable = candidate;
+                        bestHitPoint = hitPoint;
+                    }
+                }
+                
+                return bestInteractable;
+            } 
+            else // if it is combi, use Bayesian
+            {            
+                float marginal_probability = 0.0f;
+                candidateData.Clear();
+
+                foreach (TInteractable candidate in candidates)
+                {
+                    // Get position score of the candidate
+                    if (!_detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint))
+                    // check if user hand is in vision
+                    {
                         continue;
+                    }
+                    
+                    // Get shape score of the candidate
+                    DistanceHandGrabInteractable tmp = candidate as DistanceHandGrabInteractable;
+                    string name = tmp.GetObjName();
+                    float gestureScore = gestureProbability[name];
+
+                    // if (gestureScore < 0.65)
+                    // {
+                    //     gestureScore = 0.0f;
+                    // }
+
+                    float candidateScore = gestureScore * posScore;
+                    marginal_probability = marginal_probability + gestureScore * posScore;
+
+                    candidateData.Add((candidate, candidateScore, hitPoint, name, gestureScore, posScore, GestureWeight));
+                }
+
+                foreach (var item in candidateData)
+                {   
+                    TInteractable candidate = item.candidate;        
+                    float candidateScore = item.candidateScore;       
+                    Vector3 hitPoint = item.hitPoint;          
+                    string name = item.candidateName;        
+                    float gestureScore = item.gestureScore;  
+                    float posScore = item.posScore;          
+                    float GestureWeight = item.GestureWeight; 
+
+                    float finalScore =  candidateScore / marginal_probability;
+
+                    if ( posScore < 0.5)
+                    {
+                        finalScore = 0.0f;
+                    }
+
+                    candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {finalScore,8:F4}");
+
+                    if (finalScore > bestScore)
+                    {
+                        bestScore = finalScore;
+                        bestInteractable = candidate;
+                        bestHitPoint = hitPoint;
                     }
                 }
 
-                // Get shape score of the candidate
-                DistanceHandGrabInteractable tmp = candidate as DistanceHandGrabInteractable;
-                string name = tmp.GetObjName();
-                float gestureScore = gestureProbability[name];
-
-                // if (gestureScore < 0.65)
-                // {
-                //     gestureScore = 0.0f;
-                // }
-                    
-
-                // combination
-                float finalScore = ComputeFinalScore(gestureScore, posScore, GestureWeight);
-
-                // Store scores for display
-                candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {finalScore,8:F4}");
-
-                if (finalScore > bestScore)
-                {
-                    bestScore = finalScore;
-                    bestInteractable = candidate;
-                    bestHitPoint = hitPoint;
-                }
+                return bestInteractable;
             }
+
             
-            return bestInteractable;
         }
 
         /// <summary>

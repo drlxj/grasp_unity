@@ -1369,9 +1369,9 @@ MonoBehaviour:
   Prefabs: []
   objNames: []
   allObjects: []
-  gridSize: 2
-  spacing: 0.3
-  depth: -0.2
+  gridSize: 3
+  spacing: 0.2
+  depth: -4
 --- !u!4 &1281254545
 Transform:
   m_ObjectHideFlags: 0
@@ -1407,7 +1407,7 @@ MonoBehaviour:
   originalMaterial: {fileID: -3033667219593020291, guid: 54f2703ebf4fa184ba66a49b41d7d1ce, type: 3}
   Target: {fileID: 0}
   UserName: Test_A
-  SessionType: 66
+  SessionType: 73
   CounterUI: {fileID: 1335248084}
   ScoreUI: {fileID: 1580700207}
   ScoreText: {fileID: 0}
