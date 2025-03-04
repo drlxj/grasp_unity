@@ -1,8 +1,10 @@
+import glob
 import os
 from pathlib import Path
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
+import trimesh
 from .bps import encode
 # from bps_torch.bps import bps_torch
 
@@ -14,6 +16,7 @@ class ObjectDataset(object):
     )
     
     self.ds_path = os.path.join(self.file_path, f"obj_hog.npz")
+    # self.ds_path = os.path.join(self.file_path, f"obj.npz")
     self.load_or_create_datset()
     self.bps_basis = self.ds["bps_basis"][::4]
 
@@ -24,7 +27,7 @@ class ObjectDataset(object):
      else:
         self.ds = self.preprocessing()
         np.savez(self.ds_path, ds=self.ds)
-        print(f"Saved new dataset to {self.ds_path}")      
+        print(f"Saved new dataset to {self.ds_path}")  
 
   # def preprocessing(self):
   #   # bps processing for each object
@@ -47,36 +50,39 @@ class ObjectDataset(object):
   #   # bps_basis
   #   bps_fname = os.path.join(self.file_path, "bps_new.npz")
   #   ds["bps_basis"] = np.load(bps_fname)['basis']
-  #   return ds
+  #   return ds    
 
   def preprocessing(self):
-    import glob
-    import trimesh
-    # bps processing for each object
     ds = {}
-    obj_fpaths = glob.glob(r"C:\Users\research\Documents\Xuejing Luo\grasping-unity\python\files\object_meshes_hog/*.obj")
-    count = 0
+    obj_fpaths = glob.glob("files/object_meshes_hog/*.obj")  
+
     for obj_fpath in obj_fpaths:
         base_name = os.path.basename(obj_fpath)
         obj_name = base_name[3:-4]
         obj_name = obj_name.replace("_","")
+        ply_fpath = os.path.join("files/object_meshes_hog", obj_name + ".ply")
+
+        # Convert OBJ to PLY if not already converted
+        if not os.path.exists(ply_fpath):
+            mesh = trimesh.load_mesh(obj_fpath)
+            mesh.export(ply_fpath)  # Save as PLY
         
-        # Load mesh using trimesh
-        mesh = trimesh.load_mesh(obj_fpath)
-        
-        # Get vertices and faces
+                # Load mesh from PLY
+        mesh = trimesh.load_mesh(ply_fpath)
+
+        # Sample 1024 points from the mesh surface
+        pcl, _ = trimesh.sample.sample_surface(mesh, count=1024)
+        pcl = torch.tensor(pcl, dtype=torch.float32).unsqueeze(0)
+
         verts = torch.tensor(mesh.vertices, dtype=torch.float32)
         faces = torch.tensor(mesh.faces, dtype=torch.long)
-        
-        # Sample points from mesh
-        pcl = mesh.sample(1024)
-        pcl = torch.tensor(pcl, dtype=torch.float32).unsqueeze(0)
 
         ds[obj_name] = {"verts": verts, "faces": faces, "pcl": pcl}
 
-    # bps_basis
+    # Load BPS basis
     bps_fname = os.path.join(self.file_path, "bps_new.npz")
     ds["bps_basis"] = np.load(bps_fname)['basis']
+    
     return ds
 
   def get_pcl(self, obj_names, rot_matrices):
@@ -84,7 +90,7 @@ class ObjectDataset(object):
         - obj_names: a list of str
         - rot_matrices: (N, 3, 3) torch.Tensor of rotation_matrix in unity coordination
         """
-        pcl_python = torch.cat([self.ds[name]["pcl"] for name in obj_names], dim=0) #(n_obj, n_points, 3)
+        pcl_python = torch.cat([self.ds[name]["pcl"] for name in obj_names], dim=0)  #(n_obj, n_points, 3)
         rotated_pcl_python = torch.einsum("nij, nmj -> nmi", rot_matrices, pcl_python)
         return rotated_pcl_python
 
@@ -141,7 +147,6 @@ class ObjectDataset(object):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     for i, obj_name in enumerate(obj_names):
-      if obj_name == "stanfordbunny":
         plot_object(ax, obj_pcls[i].detach().cpu().numpy())
     
     if hand_joints is not None:

@@ -105,7 +105,7 @@ public class ObjectTransformAssignment : MonoBehaviour
     {
         // Set up the R_unity2python transformation
         Matrix4x4 T_unity2python = new Matrix4x4(
-                                                    new Vector4(-1, 0,  0, 0),
+                                                    new Vector4(1,  0,  0, 0),
                                                     new Vector4(0,  1,  0, 0),
                                                     new Vector4(0,  0,  1, 0),
                                                     new Vector4(0,  0,  0, 1)
@@ -116,23 +116,24 @@ public class ObjectTransformAssignment : MonoBehaviour
         for (int i = 0; i < objects.Length; i++)
         {
            GameObject current_object = objects[i];
+           
            string object_name = current_object.name;
-
+        
            object_name = object_name.Replace("_", "");
 
-        //    Debug.Log($"object_name: {object_name}");
+             Debug.Log($"object_name: {object_name}");
 
-            ObjectTransformData object_transform_set = transformData[object_name];
+             ObjectTransformData object_transform_set = transformData[object_name];
 
-            // int randomIndex = Random.Range(0, object_transform_set.seq_name.Count);
-            int randomIndex = 0;
+            int randomIndex = Random.Range(0, object_transform_set.seq_name.Count);
+            //int randomIndex = 0;
 
-            List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
+             List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 
-            // List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
-            // Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
+             //List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
+             //Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
 
-            // Create a Matrix4x4 and populate its rotation component
+             //Create a Matrix4x4 and populate its rotation component
             Matrix4x4 matrix_python = new Matrix4x4();
             matrix_python.SetRow(0, new Vector4(object_rotation_matrix[0][0], object_rotation_matrix[0][1], object_rotation_matrix[0][2], 0));
             matrix_python.SetRow(1, new Vector4(object_rotation_matrix[1][0], object_rotation_matrix[1][1], object_rotation_matrix[1][2], 0));
@@ -141,12 +142,32 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             Matrix4x4 matrix_unity = T_unity2python * matrix_python * T_unity2python;
 
-            // Extract rotation as Quaternion and translation as Vector3
             Quaternion rotation_unity = matrix_unity.rotation;
 
             current_object.transform.rotation = rotation_unity;
-            // current_object.transform.position = object_translation;
-            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
+            // Extract rotation as Quaternion and translation as Vector3
+            // Quaternion rotation_unity = Quaternion.Euler(
+            //                                 Mathf.Rad2Deg * -20.875f, 
+            //                                 Mathf.Rad2Deg * -85.646f, 
+            //                                 Mathf.Rad2Deg * -114.245f
+            //                             ); // matrix_unity.rotation;
+
+//            current_object.transform.rotation = new Vector3(-20.875f, -85.646f, -114.245f); //rotation_unity;
+//            current_object.transform.eulerAngles = new Vector3(-20.875f, -85.646f, -114.245f);
+
+            Matrix4x4 rotationMatrix = Matrix4x4.Rotate(current_object.transform.rotation);
+            string matrixString = "";
+            for (int id = 0; id < 3; id++)
+            {
+                matrixString += rotationMatrix[id, 0].ToString("F3") + " " +
+                                rotationMatrix[id, 1].ToString("F3") + " " +
+                                rotationMatrix[id, 2].ToString("F3") + "\n";
+            }
+            Debug.Log("Rotation Matrix:\n" + matrixString);
+            // current_object.transform.eulerAngles = new Vector3(-84.0f, -0.3f, -117.03f);
+            // Debug.Log($"object_quaternion: ({current_object.transform.rotation.w}, {current_object.transform.rotation.x}, {current_object.transform.rotation.y}, {current_object.transform.rotation.z})");
+//             current_object.transform.position = object_translation;
+            //Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
 
             // // === HAND JOINTS VISUALIZATION ===
             // List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];

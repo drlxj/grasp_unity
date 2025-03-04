@@ -71,6 +71,7 @@ public class SimpleTestManager : MonoBehaviour
                 initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
 
                 // Debug.Log($"obj.transform.rotation:  {obj.transform.rotation}"); 
+                // PrintMeshVertices(obj);
 
             }
         }
@@ -102,6 +103,27 @@ public class SimpleTestManager : MonoBehaviour
         interactor.OnSelectInterrupt += HandleSelectInterrupt;
 
         InvokeTest();
+    }
+
+    void PrintMeshVertices(GameObject obj)
+    {
+        Debug.Log($"PrintMeshVertice()");
+        MeshFilter meshFilter = obj.transform.Find("default").GetComponent<MeshFilter>();
+        if (meshFilter != null)
+        {
+            Mesh mesh = meshFilter.mesh;
+            Vector3[] vertices = mesh.vertices;
+
+            Debug.Log($"Vertices for {obj.name}:");
+            foreach (Vector3 vertex in vertices)
+            {
+                Debug.Log(vertex);
+            }
+        }
+        else
+        {
+            Debug.LogError($"No MeshFilter found on {obj.name}.");
+        }
     }
 
     public void ResetObjects()

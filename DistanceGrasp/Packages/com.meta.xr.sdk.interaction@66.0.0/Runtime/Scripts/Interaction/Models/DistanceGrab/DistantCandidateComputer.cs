@@ -252,10 +252,10 @@ namespace Oculus.Interaction
                 string name = tmp.GetObjName();
                 float gestureScore = gestureProbability[name];
 
-                if (gestureScore < 0.65)
-                {
-                    gestureScore = 0.0f;
-                }
+                // if (gestureScore < 0.65)
+                // {
+                //     gestureScore = 0.0f;
+                // }
                     
 
                 // combination
@@ -284,8 +284,8 @@ namespace Oculus.Interaction
             // {
             //     return 0.0f;
             // }
-            // return GestureWeight * gestureScore + (1 - GestureWeight) * posScore;
-            return (gestureScore * posScore) / (gestureScore + posScore + 1e-6f);
+            return GestureWeight * gestureScore + (1 - GestureWeight) * posScore;
+            // return (gestureScore * posScore) / (gestureScore + posScore + 1e-6f);
         }
     }
 }

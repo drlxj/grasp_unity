@@ -71,11 +71,7 @@ while True:
         print("Done")
 
 
-    # # visualization for checking coordination system transformation
-    # obj_pcl = obj_dataset.get_pcl(obj_types, obj_rot_matrices) # (n_obj, n_points, 3)
-    # obj_transl =  torch.einsum("ij,nj->ni", R_unity2python, torch.tensor(obj_positions)) # (n_obj, 3)
-    # obj_pcl_global = (obj_pcl + obj_transl.unsqueeze(1)).detach()
-    # obj_dataset.visualize_obj(obj_names=obj_types, obj_pcls=obj_pcl_global, hand_joints=None) #global_hand_joint_position_python
+
 
     # hand pose
     hand_joint_position_unity = torch.Tensor(telemetry_packet.hand_joint_position) # (n_joints, 3)
@@ -86,7 +82,25 @@ while True:
     hand_root_position_python = torch.einsum("ij,j->i", R_unity2python, hand_root_position_unity)
     global_hand_joint_position_python = hand_root_position_python + hand_joint_position_python
 
-    
+    # # visualization for checking coordination system transformation
+    obj_pcl = obj_dataset.get_pcl(obj_types, obj_rot_matrices) # (n_obj, n_points, 3)
+    obj_transl =  torch.einsum("ij,nj->ni", R_unity2python, torch.tensor(obj_positions)) # (n_obj, 3)
+    obj_pcl_global = (obj_pcl + obj_transl.unsqueeze(1)).detach()
+    # # obj_dataset.visualize_obj(obj_names=obj_types, obj_pcls=obj_pcl_global, hand_joints=global_hand_joint_position_python) #
+    # import trimesh
+    # obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
+    # hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
+
+    # obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
+    # hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
+
+    # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
+    # hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
+
+    # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
+    # scene.show()
+
+
     """
     Model run
     """

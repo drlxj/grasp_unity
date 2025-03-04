@@ -10,7 +10,7 @@ public enum ObjectType
     // ALARMCLOCK = 5,
     // DOORKNOB = 6,
     // LIGHTBULB = 7,
-    // STANFORDBUNNY = 8,
+//    STANFORDBUNNY = 8,
     // APPLE = 9,
     // DUCK = 10,
     // MOUSE = 11,
@@ -93,6 +93,7 @@ public class ObjectState
     public ObjectType objectType;
     // public int objIdx;
     public Quaternion orientation;
+//    public Vector3 orientation;
     public Vector3 position;
 
     public int AddToByteArray(ref byte[] arr, int currentPointer)
@@ -100,6 +101,7 @@ public class ObjectState
         currentPointer = ValueConverter.AddIntToArray(ref arr, currentPointer, (int)objectType);
         // currentPointer = ValueConverter.AddIntToArray(ref arr, currentPointer, objIdx);
         currentPointer = ValueConverter.AddQuaternionToArray(ref arr, currentPointer, orientation);
+        // currentPointer = ValueConverter.AddVector3ToArray(ref arr, currentPointer, orientation);
         currentPointer = ValueConverter.AddVector3ToArray(ref arr, currentPointer, position);
         return currentPointer;
     }

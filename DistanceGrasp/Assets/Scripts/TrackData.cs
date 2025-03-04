@@ -24,7 +24,7 @@ public class TrackData : MonoBehaviour
     private long packetId = 0;
 
     public GameObject[] allObjects;
-    public int gridSize = 3; // CHANGE
+    public int gridSize = 2; // CHANGE
     public float spacing = 0.1f; // CHANGE
     public float depth = -5f; // CHANGE
 
@@ -79,6 +79,8 @@ public class TrackData : MonoBehaviour
 
                 Objects[index] = instance;
 
+                
+
             }
         }
 
@@ -95,6 +97,7 @@ public class TrackData : MonoBehaviour
 
     }
 
+    
 
     private void OnEnable()
     {
@@ -212,7 +215,7 @@ public class TrackData : MonoBehaviour
         // Debug.Log($"message: {message}, root: {root}");
 
         message.objectStates = AddObjectsToTelemetryMessage(root, out string objInfo);
-        //LogObjData(objInfo);
+        // LogObjData(objInfo);
 
         socket.SendData(message.ToBytes());
     }
@@ -291,6 +294,8 @@ public class TrackData : MonoBehaviour
             Vector3 relativePosGlobal = Objects[i].transform.position - root.position;
             objStates[i].position = relativePosGlobal;
             objStates[i].orientation = Objects[i].transform.rotation;
+//            objStates[i].orientation = Objects[i].transform.eulerAngles;
+//            Debug.Log($"Object {i} orientation+++: {objStates[i].orientation}");
             //objStates[i].objectType = Objects[i].GetComponent<ObjectProperties>().ObjectType;
             string objectTypeStr = Objects[i].name.ToUpper();
             objectTypeStr = objectTypeStr.Replace("_", "");
@@ -310,10 +315,15 @@ public class TrackData : MonoBehaviour
 
         if (!File.Exists(objFilePath))
         {
+            // String[] Columns =
+            // {
+            //     "ObjIdx", "ObjType", "posX", "posY", "posZ",
+            //     "oriX", "oriY", "oriZ", "oriW"
+            // };
             String[] Columns =
             {
                 "ObjIdx", "ObjType", "posX", "posY", "posZ",
-                "oriX", "oriY", "oriZ", "oriW"
+                "oriX", "oriY", "oriZ"
             };
             using StreamWriter writer = File.CreateText(objFilePath);
             writer.WriteLine(string.Join(",", Columns));
