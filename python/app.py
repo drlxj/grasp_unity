@@ -96,7 +96,7 @@ while True:
 
     # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
     # hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
-8
+
     # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
     # scene.show()
 
