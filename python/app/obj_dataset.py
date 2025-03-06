@@ -15,8 +15,8 @@ class ObjectDataset(object):
       "files",
     )
     
-    self.ds_path = os.path.join(self.file_path, f"obj_hog.npz")
-    # self.ds_path = os.path.join(self.file_path, f"obj.npz")
+    # self.ds_path = os.path.join(self.file_path, f"obj_hog.npz")
+    self.ds_path = os.path.join(self.file_path, f"obj.npz")
     self.load_or_create_datset()
     self.bps_basis = self.ds["bps_basis"][::4]
 
@@ -54,13 +54,15 @@ class ObjectDataset(object):
 
   def preprocessing(self):
     ds = {}
-    obj_fpaths = glob.glob("files/object_meshes_hog/*.obj")  
+    # obj_fpaths = glob.glob("files/object_meshes_hog/*.obj")  
+    obj_fpaths = glob.glob("files/object_meshes/*.obj")  
 
     for obj_fpath in obj_fpaths:
         base_name = os.path.basename(obj_fpath)
         obj_name = base_name[3:-4]
         obj_name = obj_name.replace("_","")
-        ply_fpath = os.path.join("files/object_meshes_hog", obj_name + ".ply")
+        # ply_fpath = os.path.join("files/object_meshes_hog", obj_name + ".ply")
+        ply_fpath = os.path.join("files/object_meshes", obj_name + ".ply")
 
         # Convert OBJ to PLY if not already converted
         if not os.path.exists(ply_fpath):

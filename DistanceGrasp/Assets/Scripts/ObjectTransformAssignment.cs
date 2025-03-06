@@ -71,7 +71,7 @@ public class ObjectTransformData
 public class ObjectTransformAssignment : MonoBehaviour
 {
     private GameObject[] objects;
-    private string fileName = "rotation_candidates_hog";
+    private string fileName = "rotation_candidates_check_all";
     private Dictionary<string, ObjectTransformData> transformData;
 
     // Start is called before the first frame update
@@ -105,7 +105,7 @@ public class ObjectTransformAssignment : MonoBehaviour
     {
         // Set up the R_unity2python transformation
         Matrix4x4 T_unity2python = new Matrix4x4(
-                                                    new Vector4(1,  0,  0, 0),
+                                                    new Vector4(-1,  0,  0, 0),
                                                     new Vector4(0,  1,  0, 0),
                                                     new Vector4(0,  0,  1, 0),
                                                     new Vector4(0,  0,  0, 1)
@@ -130,8 +130,8 @@ public class ObjectTransformAssignment : MonoBehaviour
 
              List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 
-             //List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
-             //Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
+             List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
+             Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
 
              //Create a Matrix4x4 and populate its rotation component
             Matrix4x4 matrix_python = new Matrix4x4();
@@ -166,10 +166,10 @@ public class ObjectTransformAssignment : MonoBehaviour
             Debug.Log("Rotation Matrix:\n" + matrixString);
             // current_object.transform.eulerAngles = new Vector3(-84.0f, -0.3f, -117.03f);
             // Debug.Log($"object_quaternion: ({current_object.transform.rotation.w}, {current_object.transform.rotation.x}, {current_object.transform.rotation.y}, {current_object.transform.rotation.z})");
-//             current_object.transform.position = object_translation;
-            //Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
+            // current_object.transform.position = object_translation;
+            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
 
-            // // === HAND JOINTS VISUALIZATION ===
+            // === HAND JOINTS VISUALIZATION ===
             // List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
             // joint_positions.Add(new List<float> { 0.0f, 0.0f, 0.0f }); // Add the root joint
             // foreach (Transform child in current_object.transform)

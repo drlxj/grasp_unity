@@ -122,6 +122,7 @@ while True:
         object_count = telemetry_packet.object_count,
         confidence_score = obj_probs,
         object_position = obj_transls,
+
         # hand_root_position = telemetry_packet.hand_root_position
     )
     sock.send(command_message.to_bytes())

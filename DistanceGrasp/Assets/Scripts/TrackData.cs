@@ -42,9 +42,27 @@ public class TrackData : MonoBehaviour
         }
     }
 
+    public void FisherYatesShuffleInt(List<int> list)
+    {
+        int[] array = list.ToArray();
+
+        for (int i = array.Length - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            int temp = array[i];
+            array[i] = array[j];
+            array[j] = temp;
+        }
+
+        for (int i = 0; i < array.Length; i++)
+        {
+            list[i] = array[i];
+        }
+    }
+
     private void Awake()
     {
-        Prefabs = Resources.LoadAll<GameObject>("PrefabHog");
+        Prefabs = Resources.LoadAll<GameObject>("Prefab");
         FisherYatesShuffle(Prefabs);
 
         Objects = new GameObject[gridSize * gridSize]; 
@@ -60,31 +78,48 @@ public class TrackData : MonoBehaviour
         //    }
         //}
 
+        List<int> positionIndices = Enumerable.Range(0, gridSize * gridSize).ToList();
+        FisherYatesShuffleInt(positionIndices);
 
-        for (int row = 0; row < gridSize; row++)
+        // Debug.Log("Shuffled positionIndices: " + string.Join(", ", positionIndices));
+
+        for (int i = 0; i < gridSize * gridSize; i++)
         {
-            for (int col = 0; col < gridSize; col++)
-            {
-                int index = row * gridSize + col;
+            int randomIndex = positionIndices[i]; 
 
-                GameObject instance = Instantiate(Prefabs[index]);
+            GameObject instance = Instantiate(Prefabs[i]); 
+            instance.name = Prefabs[i].name;
 
-                instance.name = Prefabs[index].name;
+            int randRow = randomIndex / gridSize;
+            int randCol = randomIndex % gridSize;
 
-                float posX = col * spacing - offset;
-                float posY = depth;
-                float posZ = row * spacing - offset;
+            float posX = randCol * spacing - offset;
+            float posY = depth;
+            float posZ = randRow * spacing - offset;
 
-                instance.transform.position = new Vector3(startPos.x + posX, posY, startPos.z + posZ);
+            instance.transform.position = new Vector3(startPos.x + posX, posY, startPos.z + posZ);
 
-                Objects[index] = instance;
-
-                
-
-            }
+            Objects[i] = instance; 
         }
 
-        FisherYatesShuffle(Objects);
+        // if (Objects == null)
+        // {
+        //     Debug.LogError("No Objs Exist");
+        // }
+
+        objCount = Objects.Count();
+        objNames = new string[objCount];
+
+        string objLog = $"Initial {objCount} objects: ";
+        for (int i = 0; i < objCount; i++)
+        {
+            objLog += Objects[i].name + "  ";
+            objNames[i] = Objects[i].name;
+
+        }
+        Debug.Log(objLog);
+
+        // FisherYatesShuffle(Objects);
 
 
         //for (int i = 0; i < allObjects.Length; i++)
@@ -126,22 +161,22 @@ public class TrackData : MonoBehaviour
     void Start()
     {
 
-        if (Objects == null)
-        {
-            Debug.LogError("No Objs Exist");
-        }
+        // if (Objects == null)
+        // {
+        //     Debug.LogError("No Objs Exist");
+        // }
 
-        objCount = Objects.Count();
-        objNames = new string[objCount];
+        // objCount = Objects.Count();
+        // objNames = new string[objCount];
 
-        string objLog = $"Initial {objCount} objects: ";
-        for (int i = 0; i < objCount; i++)
-        {
-            objLog += Objects[i].name + "  ";
-            objNames[i] = Objects[i].name;
+        // string objLog = $"Initial {objCount} objects: ";
+        // for (int i = 0; i < objCount; i++)
+        // {
+        //     objLog += Objects[i].name + "  ";
+        //     objNames[i] = Objects[i].name;
 
-        }
-        Debug.Log(objLog);
+        // }
+        // Debug.Log(objLog);
     }
 
     void Update()
