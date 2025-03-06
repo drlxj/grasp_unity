@@ -6,6 +6,7 @@ using System.IO;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using System.Linq;
 
 [DefaultExecutionOrder(100)]
 public class SimpleTestManager : MonoBehaviour
@@ -267,12 +268,44 @@ public class SimpleTestManager : MonoBehaviour
     public void CorrectGrasp()
     {
         System.DateTime GraspingEndTime = System.DateTime.Now;
+
+        Dictionary<string, (float, float, float, float)> scoresDictionary = new Dictionary<string, (float, float, float, float)>();
+
+        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
+        {
+            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+            Debug.Log($"Split result: {string.Join(", ", parts)}");
+
+            if (parts.Length >= 5)
+            {
+                string name = parts[0];
+                float gestureScoreCandidateScores = float.Parse(parts[1]);
+                float posScoreCandidateScores = float.Parse(parts[2]);
+                float gestureWeightCandidateScores = float.Parse(parts[3]);
+                float finalScoreCandidateScores = float.Parse(parts[4]);
+
+                scoresDictionary[name] = (gestureScoreCandidateScores, posScoreCandidateScores, gestureWeightCandidateScores, finalScoreCandidateScores);
+            }
+        }
+
+
+
+        scoresDictionary.TryGetValue(TargetObjectName, out var scores);
+    
+        var (gestureScore, posScore, gestureWeight, finalScore) = scores;
+
         var data = new string[] {
             TargetObjectName,
             WrongGraspCount.ToString(),
             GraspingStartTime.ToString("yyyy-MM-dd HH:mm:ss"),
-            GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss")
+            GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss"),
+            gestureScore.ToString(),
+            posScore.ToString(),
+            gestureWeight.ToString(),
+            finalScore.ToString()
         };
+
 
         
         string LogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{SessionType}.csv";
