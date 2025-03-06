@@ -14,14 +14,19 @@ def process_detail_data(input_filename, input_csv, output_dir):
         reader = csv.reader(file)
         data = list(reader)
 
-    result = [("ObjId", "Name", "CatchDuration", "AttemptCount")]
+    result = [("ObjId", "Name", "CatchDuration", "Accuracy")]
 
-    for idx, (name, attempt_count, start_time, end_time) in enumerate(data, start=1):
+    for idx, (name, wrong_attempt_count, start_time, end_time, *_) in enumerate(data, start=1):
         start_time = parse_time(start_time.strip())
         end_time = parse_time(end_time.strip())
         catch_duration = (end_time - start_time).total_seconds() + (end_time.microsecond - start_time.microsecond) / 1e6
 
-        result.append((idx, name, f"{catch_duration:.2f}", attempt_count))
+        if wrong_attempt_count == "0":
+            accuracy = 1
+        else:
+            accuracy = 1/(int(wrong_attempt_count) + 1)
+
+        result.append((idx, name, f"{catch_duration:.2f}", f"{accuracy:.2f}"))
 
     filename = f"{input_filename}_detail.csv"
     output_csv = os.path.join(output_dir, filename)
@@ -45,23 +50,22 @@ def summarize_data(input_filename, output_detail_filename, output_path):
 
     obj_count = len(data)
     catch_durations = np.array([float(row[2]) for row in data])
-    attempt_counts = np.array([int(row[3]) for row in data])
+    obj_accuracy = np.array([float(row[3]) for row in data])
 
     catch_duration_mean = np.mean(catch_durations)
     catch_duration_var = np.var(catch_durations, ddof=0)
 
-    attempt_count_mean = np.mean(attempt_counts)
-    attempt_count_var = np.var(attempt_counts, ddof=0)
+    session_accuracy = np.sum(obj_accuracy)/obj_count
 
     summary = [
         ["ObjCount", obj_count],
         ["CatchDuration_Mean", round(catch_duration_mean, 6)],
         ["CatchDuration_Variance", round(catch_duration_var, 6)],
-        ["AttemptCount_Mean", round(attempt_count_mean, 6)],
-        ["AttemptCount_Variance", round(attempt_count_var, 6)]
+        ["Accuracy", round(session_accuracy, 6)]
     ]
 
     print(f"round(catch_duration_mean, 6): {round(catch_duration_mean, 6)}")
+    print(f"Accuracy: {round(session_accuracy, 6)}")
 
     filename = f"{input_filename}_summary.csv"
     output_csv = os.path.join(output_path, filename)
@@ -74,7 +78,7 @@ def summarize_data(input_filename, output_detail_filename, output_path):
     return
 
 # todo change file name
-input_filename = "GraspingData_20250304_180941_I"
+input_filename = "GraspingData_20250306_151235_I"
 input_csv = f"../DistanceGrasp/Assets/LogData/{input_filename}.csv"
 output_path = f"./processed_data"
 output_detail_filename = process_detail_data(input_filename, input_csv, output_path)
