@@ -1371,7 +1371,7 @@ MonoBehaviour:
   allObjects: []
   gridSize: 2
   spacing: 0.2
-  depth: -2
+  depth: -4
 --- !u!4 &1281254545
 Transform:
   m_ObjectHideFlags: 0

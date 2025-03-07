@@ -286,7 +286,7 @@ namespace Oculus.Interaction
             } 
             else // if it is combi, use Bayesian
             {            
-                float marginal_probability = 0.0f;
+                float marginal_probability = 0.000001f;
                 candidateData.Clear();
 
                 foreach (TInteractable candidate in candidates)
@@ -303,10 +303,10 @@ namespace Oculus.Interaction
                     string name = tmp.GetObjName();
                     float gestureScore = gestureProbability[name];
 
-                    // if (gestureScore < 0.65)
-                    // {
-                    //     gestureScore = 0.0f;
-                    // }
+                    if (posScore == 0f)
+                    {
+                        posScore =  0.000001f / candidates.Count() ;
+                    }
 
                     float candidateScore = gestureScore * posScore;
                     marginal_probability = marginal_probability + gestureScore * posScore;
@@ -326,10 +326,6 @@ namespace Oculus.Interaction
 
                     float finalScore =  candidateScore / marginal_probability;
 
-                    if ( posScore < 0.5)
-                    {
-                        finalScore = 0.0f;
-                    }
 
                     candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {finalScore,8:F4}");
 
