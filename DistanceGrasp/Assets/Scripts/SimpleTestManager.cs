@@ -56,7 +56,7 @@ public class SimpleTestManager : MonoBehaviour
 
     private void Awake()
     {
-        start_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        start_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss.fff");
     }
 
     System.Random rng = new System.Random();
@@ -264,9 +264,17 @@ public class SimpleTestManager : MonoBehaviour
     //    string Counter = $"{TrialIndex}/{BlockSize}";
     //    CounterText.text = Counter;
     //}
+    
+    public AudioSource audioSource;
 
     public void CorrectGrasp()
     {
+        
+        if (audioSource != null)
+        {
+            audioSource.Play();
+        }
+
         System.DateTime GraspingEndTime = System.DateTime.Now;
 
         Dictionary<string, (float, float, float, float)> scoresDictionary = new Dictionary<string, (float, float, float, float)>();
@@ -298,8 +306,8 @@ public class SimpleTestManager : MonoBehaviour
         var data = new string[] {
             TargetObjectName,
             WrongGraspCount.ToString(),
-            GraspingStartTime.ToString("yyyy-MM-dd HH:mm:ss"),
-            GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss"),
+            GraspingStartTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+            GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
             gestureScore.ToString(),
             posScore.ToString(),
             gestureWeight.ToString(),

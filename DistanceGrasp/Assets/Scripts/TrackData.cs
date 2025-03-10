@@ -62,7 +62,7 @@ public class TrackData : MonoBehaviour
 
     private void Awake()
     {
-        Prefabs = Resources.LoadAll<GameObject>("Prefab");
+        Prefabs = Resources.LoadAll<GameObject>("Prefab1");
         FisherYatesShuffle(Prefabs);
 
         Objects = new GameObject[gridSize * gridSize]; 

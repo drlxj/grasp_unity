@@ -6,7 +6,7 @@ import numpy as np
 
 
 def parse_time(time_str):
-    return datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+    return datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
 
 
 def process_detail_data(input_filename, input_csv, output_dir):
@@ -78,7 +78,7 @@ def summarize_data(input_filename, output_detail_filename, output_path):
     return
 
 # todo change file name
-input_filename = "GraspingData_20250310_095402_G"
+input_filename = "GraspingData_20250310_135248.435_G"
 input_csv = f"../DistanceGrasp/Assets/LogData/{input_filename}.csv"
 output_path = f"./processed_data"
 output_detail_filename = process_detail_data(input_filename, input_csv, output_path)
