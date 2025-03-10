@@ -17,6 +17,7 @@ class TelemetryMessage:
     hand_joint_position: np.array # (N_JOINTS, 3) vectors
 
     object_count: int
+    object_type_ids: list
     object_types: list
     # object_idxs: list
     object_positions: np.array # (object_count, 3) vector
@@ -36,9 +37,11 @@ class TelemetryMessage:
         object_positions = None if object_count == 0 else np.empty((object_count, 3), dtype=np.float32)
         object_orientations = None if object_count == 0 else np.empty((object_count, 4), dtype=np.float32)
         object_types = []
+        object_type_ids = []
         # object_idxs = []
         for i in range(object_count):
             object_type_id = decoder.get_int()
+            object_type_ids.append(object_type_id)
             obj_type = ObjectType(object_type_id)
             object_types.append(obj_type.name.lower().replace("_", ""))
             # object_idxs.append(decoder.get_int())
@@ -51,6 +54,7 @@ class TelemetryMessage:
                                 hand_root_orientation, hand_root_position, 
                                 hand_joint_position,
                                 object_count, 
+                                object_type_ids,
                                 object_types, 
                                 # object_idxs,
                                 object_positions, object_orientations)
@@ -60,6 +64,7 @@ class TelemetryMessage:
 class CommandMessage:
     object_count: int
     confidence_score: list
+    object_type_ids: list
     object_position: np.array # (object_count, 3) vector3
     # hand_root_position: np.array # (3) vector
 
@@ -72,6 +77,9 @@ class CommandMessage:
 
         for i in range(self.object_count):
             encoder.add_float(self.confidence_score[i])
+
+        for i in range(self.object_count):
+            encoder.add_int(self.object_type_ids[i])
 
         
         # for i in range(self.object_count):

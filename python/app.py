@@ -57,6 +57,7 @@ while True:
         print("Loading for the objects' orientation info") 
         # Convert the point-cloud to bps data for each object in the scene
         obj_types = telemetry_packet.object_types
+        object_type_ids = telemetry_packet.object_type_ids
         # obj_indices = telemetry_packet.object_idxs
         print("obj_types:")
         print(obj_types)
@@ -121,6 +122,7 @@ while True:
     command_message = CommandMessage (
         object_count = telemetry_packet.object_count,
         confidence_score = obj_probs,
+        object_type_ids = object_type_ids,
         object_position = obj_transls,
 
         # hand_root_position = telemetry_packet.hand_root_position

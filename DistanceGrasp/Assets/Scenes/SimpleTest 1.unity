@@ -1371,7 +1371,7 @@ MonoBehaviour:
   allObjects: []
   gridSize: 2
   spacing: 0.2
-  depth: -4
+  depth: -2
 --- !u!4 &1281254545
 Transform:
   m_ObjectHideFlags: 0
@@ -2126,7 +2126,7 @@ Transform:
   m_GameObject: {fileID: 1580700207}
   serializedVersion: 2
   m_LocalRotation: {x: -0.08262737, y: 0.7022626, z: 0.07820101, w: 0.7027692}
-  m_LocalPosition: {x: 1.92, y: 1.668, z: 0.005}
+  m_LocalPosition: {x: 2.11, y: 0.83, z: 0.01}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children:

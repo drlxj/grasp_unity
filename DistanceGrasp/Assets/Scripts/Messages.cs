@@ -108,7 +108,7 @@ public class ObjectState
 }
 
 public class TelemetryMessage
-{
+{ 
     public static readonly int JOINT_COUNT = 20;
 
     public long packetIdx;
@@ -151,6 +151,7 @@ public class CommandMessage
 {
     public int objectCount;
     public float[] confidenceScore;
+    public int[] objTypesID;
     public Vector3[] objectPositions;
 
     public CommandMessage(byte[] bytes)
@@ -158,16 +159,24 @@ public class CommandMessage
         FromBytes(bytes);
     }
 
+
+
     private void FromBytes(byte[] bytes)
     {
         int currentPointer = 0;
         currentPointer = ValueConverter.ArrayToInt(ref bytes, currentPointer, out objectCount);
         confidenceScore = new float[objectCount];
+        objTypesID = new int[objectCount];
         objectPositions = new Vector3[objectCount];
 
         for (int i = 0; i < objectCount; i++)
         {
             currentPointer = ValueConverter.ArrayToFloat(ref bytes, currentPointer, out confidenceScore[i]);
+        }
+
+        for (int i = 0; i < objectCount; i++)
+        {
+            currentPointer = ValueConverter.ArrayToInt(ref bytes, currentPointer, out objTypesID[i]);
         }
 
         for (int i = 0; i < objectCount; i++)

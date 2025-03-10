@@ -52,10 +52,16 @@ public class ActionReceiver : MonoBehaviour
         Dictionary<string, float> gestureProbabilities = new();
         Dictionary<string, Vector3> relativePositions = new();
 
+
         for (int i = 0; i< latestMsg.objectCount; i++)
         {
-            string objectName = dataManager.objNames[i];
+            // string objectName = dataManager.objNames[i];
             float confidence = latestMsg.confidenceScore[i];
+            int objTypesID = latestMsg.objTypesID[i];
+            ObjectType objType = (ObjectType)objTypesID;
+            string objectName = Enum.GetName(typeof(ObjectType), objType);
+            objectName = objectName.ToLower();
+
             Vector3 position = latestMsg.objectPositions[i];
 
             gestureProbabilities[objectName] = confidence;

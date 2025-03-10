@@ -78,7 +78,7 @@ def summarize_data(input_filename, output_detail_filename, output_path):
     return
 
 # todo change file name
-input_filename = "GraspingData_20250306_151235_I"
+input_filename = "GraspingData_20250310_095402_G"
 input_csv = f"../DistanceGrasp/Assets/LogData/{input_filename}.csv"
 output_path = f"./processed_data"
 output_detail_filename = process_detail_data(input_filename, input_csv, output_path)
