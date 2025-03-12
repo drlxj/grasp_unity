@@ -14,6 +14,8 @@ public class TrackData : MonoBehaviour
     [HideInInspector]
     public GameObject[] Objects;
     public GameObject[] Prefabs;
+
+    public string PrefabFolderName;
     [HideInInspector]
     public string[] objNames;
     private readonly float updateInterval = 1.0f / 15.0f; // 15 fps
@@ -62,7 +64,7 @@ public class TrackData : MonoBehaviour
 
     private void Awake()
     {
-        Prefabs = Resources.LoadAll<GameObject>("Prefab1");
+        Prefabs = Resources.LoadAll<GameObject>(PrefabFolderName);
         FisherYatesShuffle(Prefabs);
 
         Objects = new GameObject[gridSize * gridSize]; 

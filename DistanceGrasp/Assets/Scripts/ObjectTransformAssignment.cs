@@ -29,6 +29,7 @@ public class ObjectTransformData
     public List<List<float>> object_translation { get; set; }
     public List<List<List<float>>> subject_joints_pos_rel2wrist { get; set; }
     // public List<List<List<float>>> subject_vertices_pos_rel2wrist { get; set; }
+    
 
     public override string ToString()
     {
@@ -71,7 +72,7 @@ public class ObjectTransformData
 public class ObjectTransformAssignment : MonoBehaviour
 {
     private GameObject[] objects;
-    private string fileName = "rotation_candidates";
+    public string fileName; //"rotation_candidates_check_all";
     private Dictionary<string, ObjectTransformData> transformData;
 
     // Start is called before the first frame update
@@ -127,11 +128,13 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             int randomIndex = Random.Range(0, object_transform_set.seq_name.Count);
             //int randomIndex = 0;
+            if (object_name == "waterbottle")
+                randomIndex = 290;
 
              List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 
-            //  List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
-            //  Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
+             List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
+             Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
 
              //Create a Matrix4x4 and populate its rotation component
             Matrix4x4 matrix_python = new Matrix4x4();
@@ -167,60 +170,60 @@ public class ObjectTransformAssignment : MonoBehaviour
             // current_object.transform.eulerAngles = new Vector3(-84.0f, -0.3f, -117.03f);
             // Debug.Log($"object_quaternion: ({current_object.transform.rotation.w}, {current_object.transform.rotation.x}, {current_object.transform.rotation.y}, {current_object.transform.rotation.z})");
             // current_object.transform.position = object_translation;
-            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} with matrix"  + string.Join(", ", object_rotation_matrix));
+            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} index {randomIndex} with matrix"  + string.Join(", ", object_rotation_matrix));
 
             // === HAND JOINTS VISUALIZATION ===
-            // List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
-            // joint_positions.Add(new List<float> { 0.0f, 0.0f, 0.0f }); // Add the root joint
-            // foreach (Transform child in current_object.transform)
-            // {
-            //    if (child.name.StartsWith("Joint_"))
-            //    {
-            //        Destroy(child.gameObject);  // Clear previous joints
-            //    }
-            // }
+            List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
+            joint_positions.Add(new List<float> { 0.0f, 0.0f, 0.0f }); // Add the root joint
+            foreach (Transform child in current_object.transform)
+            {
+               if (child.name.StartsWith("Joint_"))
+               {
+                   Destroy(child.gameObject);  // Clear previous joints
+               }
+            }
 
-            // for (int j = 0; j < joint_positions.Count; j++)
-            // {
-            //    Vector3 joint_position = new Vector3(joint_positions[j][0], joint_positions[j][1], joint_positions[j][2]);
+            for (int j = 0; j < joint_positions.Count; j++)
+            {
+               Vector3 joint_position = new Vector3(joint_positions[j][0], joint_positions[j][1], joint_positions[j][2]);
 
-            //    // Apply transformation to align with Unity's coordinate system
-            //    joint_position = T_python2unity.MultiplyPoint3x4(joint_position - object_translation);
+               // Apply transformation to align with Unity's coordinate system
+               joint_position = T_python2unity.MultiplyPoint3x4(joint_position - object_translation);
 
-            //    // Instantiate a sphere at each joint position
-            //    GameObject jointSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            //    jointSphere.transform.position = current_object.transform.position + joint_position;
-            //    jointSphere.transform.localScale = Vector3.one * 0.01f; // Small sphere size
-            //    jointSphere.name = $"Joint_{i}";
-            //    jointSphere.transform.parent = current_object.transform;
+               // Instantiate a sphere at each joint position
+               GameObject jointSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+               jointSphere.transform.position = current_object.transform.position + joint_position;
+               jointSphere.transform.localScale = Vector3.one * 0.01f; // Small sphere size
+               jointSphere.name = $"Joint_{i}";
+               jointSphere.transform.parent = current_object.transform;
 
-            //    // Change color of the first joint
-            //     Renderer renderer = jointSphere.GetComponent<MeshRenderer>();
-            //     if (renderer != null)
-            //     {
-            //         if (j == 20)
-            //         {
-            //             renderer.material.color = Color.red; // Set first joint to red
-            //         }
-            //         else if (j == 0 || j == 1 || j == 2 || j ==3)
-            //         {
-            //             renderer.material.color = Color.blue; // Default color for others
-            //         }
-            //         else if (j == 4 || j == 5 || j == 6 || j ==7)
-            //         {
-            //             renderer.material.color = Color.green; // Default color for others
-            //         }
-            //         else if (j == 8 || j == 9 || j == 10 || j ==11)
-            //         {
-            //             renderer.material.color = Color.yellow; // Default color for others
-            //         }
-            //         else if (j == 12 || j == 13 || j == 14 || j ==15)
-            //         {
-            //             renderer.material.color = Color.black; // Default color for others
-            //         }
-            //     }
+               // Change color of the first joint
+                Renderer renderer = jointSphere.GetComponent<MeshRenderer>();
+                if (renderer != null)
+                {
+                    if (j == 20)
+                    {
+                        renderer.material.color = Color.red; // Set first joint to red
+                    }
+                    else if (j == 0 || j == 1 || j == 2 || j ==3)
+                    {
+                        renderer.material.color = Color.blue; // Default color for others
+                    }
+                    else if (j == 4 || j == 5 || j == 6 || j ==7)
+                    {
+                        renderer.material.color = Color.green; // Default color for others
+                    }
+                    else if (j == 8 || j == 9 || j == 10 || j ==11)
+                    {
+                        renderer.material.color = Color.yellow; // Default color for others
+                    }
+                    else if (j == 12 || j == 13 || j == 14 || j ==15)
+                    {
+                        renderer.material.color = Color.black; // Default color for others
+                    }
+                }
 
-            // }
+            }
 
         }
     }
