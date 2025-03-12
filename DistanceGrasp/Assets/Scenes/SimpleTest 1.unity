@@ -1152,6 +1152,14 @@ PrefabInstance:
       propertyPath: _localDimming
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2483171112681471078, guid: f54012181eacade4ea242c65f804720f, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2483171112681471079, guid: f54012181eacade4ea242c65f804720f, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2514675399181695721, guid: f54012181eacade4ea242c65f804720f, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1199,6 +1207,10 @@ PrefabInstance:
     - target: {fileID: 2777172415575977918, guid: f54012181eacade4ea242c65f804720f, type: 3}
       propertyPath: _apertureDegrees
       value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 2799484147959018067, guid: f54012181eacade4ea242c65f804720f, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3244417649712432580, guid: f54012181eacade4ea242c65f804720f, type: 3}
       propertyPath: m_IsActive
@@ -1373,8 +1385,8 @@ MonoBehaviour:
   objNames: []
   allObjects: []
   gridSize: 2
-  spacing: 0.1
-  depth: -0.5
+  spacing: 0.2
+  depth: -2
 --- !u!4 &1281254545
 Transform:
   m_ObjectHideFlags: 0
@@ -1410,7 +1422,7 @@ MonoBehaviour:
   originalMaterial: {fileID: -3033667219593020291, guid: 54f2703ebf4fa184ba66a49b41d7d1ce, type: 3}
   Target: {fileID: 0}
   UserName: Test_A
-  SessionType: 66
+  SessionType: 71
   CounterUI: {fileID: 1335248084}
   ScoreUI: {fileID: 1580700207}
   ScoreText: {fileID: 0}
@@ -1440,6 +1452,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfb5b5ff1e10c354282be0a8573dfb9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  fileName: rotation_candidates_check_all
 --- !u!114 &1281254549
 MonoBehaviour:
   m_ObjectHideFlags: 0
