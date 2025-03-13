@@ -1503,10 +1503,11 @@ MonoBehaviour:
   Objects: []
   interactor: {fileID: 1717875438}
   glowMaterial: {fileID: 2100000, guid: b45f48c8c4a26df40ae0683c37b4843c, type: 2}
+  progressBarPrefab: {fileID: 1503794477145344827, guid: b96ad561bc7bc1e48b2d1c4afd36fa7e, type: 3}
   originalMaterial: {fileID: -3033667219593020291, guid: 54f2703ebf4fa184ba66a49b41d7d1ce, type: 3}
   Target: {fileID: 0}
   UserName: Test_A
-  SessionType: 71
+  SessionType: 73
   CounterUI: {fileID: 1335248084}
   ScoreUI: {fileID: 1580700207}
   ScoreText: {fileID: 0}
@@ -1789,7 +1790,7 @@ MonoBehaviour:
   m_fontSizeMax: 72
   m_fontStyle: 0
   m_HorizontalAlignment: 1
-  m_VerticalAlignment: 512
+  m_VerticalAlignment: 1024
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -1817,7 +1818,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_margin: {x: 0, y: 15.136501, z: 0, w: 16.991055}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -2187,7 +2188,7 @@ Transform:
   m_GameObject: {fileID: 1348685338}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.1659515, y: 0.6908139, z: -0.30572942}
+  m_LocalPosition: {x: 1, y: 1, z: 1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2386,7 +2387,7 @@ Transform:
   m_GameObject: {fileID: 1580700207}
   serializedVersion: 2
   m_LocalRotation: {x: -0.08262737, y: 0.7022626, z: 0.07820101, w: 0.7027692}
-  m_LocalPosition: {x: 2.471, y: -0.728, z: 0.02}
+  m_LocalPosition: {x: 2.06, y: 1.042, z: 0.008}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -3069,7 +3070,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 280, y: 180}
+  m_SizeDelta: {x: 280, y: 175}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1001 &1881678817
 PrefabInstance:

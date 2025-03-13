@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.UI;
 
 [DefaultExecutionOrder(100)]
 public class SimpleTestManager : MonoBehaviour
@@ -20,7 +21,8 @@ public class SimpleTestManager : MonoBehaviour
 
     public DistanceHandGrabInteractor interactor;
     public Material glowMaterial;
-
+    public GameObject progressBarPrefab;
+    private List<Slider> progressBars = new List<Slider>();
     public Material originalMaterial;
 
     [HideInInspector]
@@ -106,6 +108,8 @@ public class SimpleTestManager : MonoBehaviour
         ScoreText = ScoreUI.GetComponentInChildren<TextMeshProUGUI>();
         ScoreText.text = "";
 
+        //CreateOrUpdateProgressBar();
+
         SetConfig();
         //BlockData =  new BlockDataPackage(Objects, ObjectInScene, BlockSize);
         TrialIndex = 0;
@@ -122,26 +126,84 @@ public class SimpleTestManager : MonoBehaviour
         InvokeTest();
     }
 
-    void PrintMeshVertices(GameObject obj)
+    private void CreateOrUpdateProgressBar()
     {
-        Debug.Log($"PrintMeshVertice()");
-        MeshFilter meshFilter = obj.transform.Find("default").GetComponent<MeshFilter>();
-        if (meshFilter != null)
+        if (!progressBars.Any())
         {
-            Mesh mesh = meshFilter.mesh;
-            Vector3[] vertices = mesh.vertices;
 
-            Debug.Log($"Vertices for {obj.name}:");
-            foreach (Vector3 vertex in vertices)
+            foreach (var scoreEntry in interactor.candidateScores.Skip(1))
             {
-                Debug.Log(vertex);
+                var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length >= 5)
+                {
+                    string name = parts[0];
+                    float finalScoreCandidateScores = float.Parse(parts[4]);
+
+                    GameObject sliderObject = Instantiate(progressBarPrefab, ScoreText.transform);
+                    Slider progressBar = sliderObject.GetComponent<Slider>();
+
+                    progressBar.minValue = 0.0f;
+                    progressBar.maxValue = 1.0f;
+                    progressBar.value = finalScoreCandidateScores;
+
+                    RectTransform sliderRectTransform = sliderObject.GetComponent<RectTransform>();
+
+                    sliderRectTransform.sizeDelta = new Vector2(200, 25);
+
+                    GameObject scoreTextObject = new GameObject("ScoreText", typeof(TextMeshProUGUI));
+                    scoreTextObject.transform.SetParent(sliderObject.transform, false);
+                    TextMeshProUGUI scoreText = scoreTextObject.GetComponent<TextMeshProUGUI>();
+                    scoreText.text = $"{name}: {finalScoreCandidateScores:F2}";
+                    scoreText.fontSize = 10;
+                    scoreText.alignment = TextAlignmentOptions.Center;
+                    RectTransform scoreTextRectTransform = scoreTextObject.GetComponent<RectTransform>();
+                    scoreTextRectTransform.anchoredPosition = new Vector2(0, 10);
+                    scoreTextRectTransform.sizeDelta = new Vector2(100, 20);
+
+                    progressBars.Add(progressBar);
+
+                }
             }
         }
-        else
-        {
-            Debug.LogError($"No MeshFilter found on {obj.name}.");
+        else {
+            int index = 0;
+
+            foreach (var scoreEntry in interactor.candidateScores.Skip(1))
+            {
+                var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length >= 5)
+                {
+                    string name = parts[0];
+                    float finalScoreCandidateScores = float.Parse(parts[4]);
+
+                    Slider progressBar = progressBars[index];
+                    progressBar.value = finalScoreCandidateScores;
+
+                    Transform scoreTextObject = progressBar.transform.Find("ScoreText");
+                    if (scoreTextObject != null)
+                    {
+                        TextMeshProUGUI scoreText = scoreTextObject.GetComponent<TextMeshProUGUI>();
+                        scoreText.text = $"{name}: {finalScoreCandidateScores:F2}";
+                    }
+
+                    index++;
+                }
+
+                
+            }
+
         }
     }
+
+    //public void UpdateProgressBar(float value)
+    //{
+    //    if (progressBar != null)
+    //    {
+    //        progressBar.value = value;
+    //    }
+    //}
 
     public void ResetObjects()
     {
@@ -171,7 +233,8 @@ public class SimpleTestManager : MonoBehaviour
     }
 
     void Update(){
-        ScoreText.text = string.Join("\n", interactor.candidateScores);
+        //ScoreText.text = string.Join("\n", interactor.candidateScores);
+        CreateOrUpdateProgressBar();
     }
 
     public void HandleSelectTrue(object sender, EventArgs e)
