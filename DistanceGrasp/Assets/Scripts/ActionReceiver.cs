@@ -19,6 +19,18 @@ public class ActionReceiver : MonoBehaviour
     public bool DebugSwitch;
     private static CommandMessage latestMsg = null;
 
+    private static readonly Lazy<Dictionary<ObjectType, string>> _enumNameCache =
+        new(() =>
+        {
+            var dict = new Dictionary<ObjectType, string>();
+            foreach (ObjectType type in Enum.GetValues(typeof(ObjectType)))
+            {
+                dict[type] = type.ToString();
+            }
+            return dict;
+        });
+
+
     TrackData dataManager;
     void Awake()
     {
@@ -42,6 +54,11 @@ public class ActionReceiver : MonoBehaviour
 
     }
 
+    public static string GetEnumName(ObjectType objType)
+    {
+        return _enumNameCache.Value.TryGetValue(objType, out string name) ? name : "Unknown";
+    }
+
     public void GetMostProbableObjIdx(byte[] data)
     {
         latestMsg = new CommandMessage(data);
@@ -59,7 +76,7 @@ public class ActionReceiver : MonoBehaviour
             float confidence = latestMsg.confidenceScore[i];
             int objTypesID = latestMsg.objTypesID[i];
             ObjectType objType = (ObjectType)objTypesID;
-            string objectName = Enum.GetName(typeof(ObjectType), objType);
+            string objectName = GetEnumName(objType);
             objectName = objectName.ToLower();
 
             Vector3 position = latestMsg.objectPositions[i];

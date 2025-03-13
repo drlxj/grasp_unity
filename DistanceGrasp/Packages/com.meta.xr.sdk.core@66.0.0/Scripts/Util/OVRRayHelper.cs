@@ -47,7 +47,7 @@ public class OVRRayHelper : MonoBehaviour
     public void UpdatePointerRay(OVRInputRayData rayData)
     {
         if (Renderer != null)
-        {
+        {   
             float targetLength = rayData.IsOverCanvas ? rayData.DistanceToCanvas : DefaultLength;
             Renderer.transform.localPosition = Vector3.forward * (targetLength * 0.5f + 0.05f);
             Renderer.transform.localScale = new Vector3(_initialScale.x, targetLength * 0.5f - 0.025f, _initialScale.z);
@@ -59,9 +59,10 @@ public class OVRRayHelper : MonoBehaviour
             Cursor.SetActive(rayData.IsOverCanvas);
             Cursor.transform.localScale = Mathf.Lerp(1f, _cursorSelectedScaleFactor, rayData.ActivationStrength) * _cursorIntitialSize;
             if (CursorFill != null)
-            {
+            {   
                 float alpha = Mathf.Lerp(0f, 1f, rayData.ActivationStrength);
                 CursorFill.color = new Color(1, 1, 1, alpha);
+                // CursorFill.color = new Color(1, 0, 0, alpha);
             }
             if (rayData.IsOverCanvas)
             {

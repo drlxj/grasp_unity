@@ -105,7 +105,7 @@ public class OVRHand : MonoBehaviour,
 
     private void InitializePointerPose()
     {
-        Debug.Log("InitializePointerPose()");
+        //Debug.Log("InitializePointerPose()");
         _pointerPoseGO = new GameObject($"{HandType} {nameof(PointerPose)}");
         _pointerPoseGO.hideFlags = HideFlags.HideAndDontSave;
         if (_pointerPoseRoot != null)
@@ -118,7 +118,8 @@ public class OVRHand : MonoBehaviour,
     }
 
     private void Awake()
-    {
+    {   
+        Debug.Log("if (RayHelper != null)");
         if( _pointerPoseGO == null )
         {
             InitializePointerPose();
@@ -126,6 +127,7 @@ public class OVRHand : MonoBehaviour,
 
         if (RayHelper != null)
         {
+            //Debug.Log("if (RayHelper != null)");
             RayHelper.transform.SetParent(PointerPose, false);
         }
         GetHandState(OVRPlugin.Step.Render);
@@ -229,6 +231,7 @@ public class OVRHand : MonoBehaviour,
             IsDataValid = false;
             IsDataHighConfidence = false;
         }
+
     }
 
     public bool GetFingerIsPinching(HandFinger finger)
