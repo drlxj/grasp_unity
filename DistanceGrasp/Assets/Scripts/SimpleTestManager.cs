@@ -22,7 +22,11 @@ public class SimpleTestManager : MonoBehaviour
     public DistanceHandGrabInteractor interactor;
     public Material glowMaterial;
     public GameObject progressBarPrefab;
+    public GameObject posProgressBarPrefab;
+    public GameObject gesProgressBarPrefab;
     private List<Slider> progressBars = new List<Slider>();
+    private List<Slider> posProgressBars = new List<Slider>();
+    private List<Slider> gesProgressBars = new List<Slider>();
     public Material originalMaterial;
 
     [HideInInspector]
@@ -38,7 +42,11 @@ public class SimpleTestManager : MonoBehaviour
     public GameObject CounterUI;
     private TextMeshProUGUI CounterText;
     public GameObject ScoreUI;
+    public GameObject PosScoreUI;
+    public GameObject GesScoreUI;
     public TextMeshProUGUI ScoreText;
+    public TextMeshProUGUI posScoreText;
+    public TextMeshProUGUI gesScoreText;
     [HideInInspector]
 
     private int TrialIndex;
@@ -108,6 +116,11 @@ public class SimpleTestManager : MonoBehaviour
         ScoreText = ScoreUI.GetComponentInChildren<TextMeshProUGUI>();
         ScoreText.text = "";
 
+        posScoreText = PosScoreUI.GetComponentInChildren<TextMeshProUGUI>();
+        posScoreText.text = "";
+        gesScoreText = GesScoreUI.GetComponentInChildren<TextMeshProUGUI>();
+        gesScoreText.text = "";
+
         //CreateOrUpdateProgressBar();
 
         SetConfig();
@@ -136,8 +149,10 @@ public class SimpleTestManager : MonoBehaviour
                 var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
 
                 if (parts.Length >= 5)
-                {
+                {   
+                    // final score bars
                     string name = parts[0];
+                    float posScoreCandidateScores = float.Parse(parts[2]);
                     float finalScoreCandidateScores = float.Parse(parts[4]);
 
                     GameObject sliderObject = Instantiate(progressBarPrefab, ScoreText.transform);
@@ -147,21 +162,55 @@ public class SimpleTestManager : MonoBehaviour
                     progressBar.maxValue = 1.0f;
                     progressBar.value = finalScoreCandidateScores;
 
-                    RectTransform sliderRectTransform = sliderObject.GetComponent<RectTransform>();
+                    // RectTransform sliderRectTransform = sliderObject.GetComponent<RectTransform>();
 
-                    sliderRectTransform.sizeDelta = new Vector2(200, 25);
+                    // sliderRectTransform.sizeDelta = new Vector2(200, 25);
 
                     GameObject scoreTextObject = new GameObject("ScoreText", typeof(TextMeshProUGUI));
                     scoreTextObject.transform.SetParent(sliderObject.transform, false);
                     TextMeshProUGUI scoreText = scoreTextObject.GetComponent<TextMeshProUGUI>();
                     scoreText.text = $"{name}: {finalScoreCandidateScores:F2}";
-                    scoreText.fontSize = 10;
+
+                    // \nG: {gestureScoreCandidateScores}, P: {posScoreCandidateScores}
+
+                    scoreText.fontSize = 7;
+                    scoreText.color = new Color32(139, 0, 0, 255);
                     scoreText.alignment = TextAlignmentOptions.Center;
                     RectTransform scoreTextRectTransform = scoreTextObject.GetComponent<RectTransform>();
-                    scoreTextRectTransform.anchoredPosition = new Vector2(0, 10);
+                    scoreTextRectTransform.anchoredPosition = new Vector2(0, 8);
                     scoreTextRectTransform.sizeDelta = new Vector2(100, 20);
 
                     progressBars.Add(progressBar);
+
+                    // gesture score bars
+                    float gestureScoreCandidateScores = float.Parse(parts[1]);
+
+                    GameObject gesSliderObject = Instantiate(gesProgressBarPrefab, gesScoreText.transform);
+                    Slider gesProgressBar = gesSliderObject.GetComponent<Slider>();
+
+                    gesProgressBar.minValue = 0.0f;
+                    gesProgressBar.maxValue = 1.0f;
+                    gesProgressBar.value = gestureScoreCandidateScores;
+
+                    // RectTransform gesSliderRectTransform = gesSliderObject.GetComponent<RectTransform>();
+
+                    // gesSliderRectTransform.sizeDelta = new Vector2(100, 25);
+
+                    GameObject scoreTextObjectGes = new GameObject("ScoreText", typeof(TextMeshProUGUI));
+                    scoreTextObjectGes.transform.SetParent(gesSliderObject.transform, false);
+                    TextMeshProUGUI scoreTextGes = scoreTextObjectGes.GetComponent<TextMeshProUGUI>();
+                    scoreTextGes.text = $"{name}: {gestureScoreCandidateScores:F2}";
+
+                    // \nG: {gestureScoreCandidateScores}, P: {posScoreCandidateScores}
+
+                    scoreTextGes.fontSize = 7;
+                    scoreTextGes.color = new Color32(0, 0, 139, 255);
+                    scoreTextGes.alignment = TextAlignmentOptions.Center;
+                    RectTransform scoreTextRectTransformGes = scoreTextObjectGes.GetComponent<RectTransform>();
+                    scoreTextRectTransformGes.anchoredPosition = new Vector2(0, 8);
+                    scoreTextRectTransformGes.sizeDelta = new Vector2(100, 20);
+
+                    gesProgressBars.Add(gesProgressBar);
 
                 }
             }
@@ -176,6 +225,8 @@ public class SimpleTestManager : MonoBehaviour
                 if (parts.Length >= 5)
                 {
                     string name = parts[0];
+                    
+                    float posScoreCandidateScores = float.Parse(parts[2]);
                     float finalScoreCandidateScores = float.Parse(parts[4]);
 
                     Slider progressBar = progressBars[index];
@@ -187,6 +238,19 @@ public class SimpleTestManager : MonoBehaviour
                         TextMeshProUGUI scoreText = scoreTextObject.GetComponent<TextMeshProUGUI>();
                         scoreText.text = $"{name}: {finalScoreCandidateScores:F2}";
                     }
+
+
+                    float gestureScoreCandidateScores = float.Parse(parts[1]);
+                    Slider gesProgressBar = gesProgressBars[index];
+                    gesProgressBar.value = gestureScoreCandidateScores;
+
+                    Transform scoreTextObjectGes = gesProgressBar.transform.Find("ScoreText");
+                    if (scoreTextObjectGes != null)
+                    {
+                        TextMeshProUGUI scoreTextGes = scoreTextObjectGes.GetComponent<TextMeshProUGUI>();
+                        scoreTextGes.text = $"{name}: {gestureScoreCandidateScores:F2}";
+                    }
+
 
                     index++;
                 }
