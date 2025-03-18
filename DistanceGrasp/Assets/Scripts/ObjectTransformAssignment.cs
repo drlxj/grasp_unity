@@ -133,7 +133,7 @@ public class ObjectTransformAssignment : MonoBehaviour
 
              List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 
-            List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
+            // List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
             //  Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
 
              //Create a Matrix4x4 and populate its rotation component

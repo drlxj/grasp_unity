@@ -89,29 +89,16 @@ public class SimpleTestManager : MonoBehaviour
     {
         Objects = this.GetComponent<TrackData>().Objects;
 
-        // FisherYatesShuffle(Objects);
 
         foreach (var obj in Objects)
         {
             if (obj != null)
             {
                 initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
-
-                // Debug.Log($"obj.transform.rotation:  {obj.transform.rotation}"); 
-                // PrintMeshVertices(obj);
-
             }
         }
 
-
-        //if (ObjectInScene > Objects.Length)
-        //{
-        //    Debug.LogError("Not Enough Objects");
-        //}
-
         CounterText = CounterUI.GetComponentInChildren<TextMeshProUGUI>();
-        //string Counter = $"{TrialIndex}/{BlockSize}";
-        //CounterText.text = Counter;
 
         ScoreText = ScoreUI.GetComponentInChildren<TextMeshProUGUI>();
 
@@ -119,14 +106,9 @@ public class SimpleTestManager : MonoBehaviour
 
         gesScoreText = GesScoreUI.GetComponentInChildren<TextMeshProUGUI>();
 
-        //CreateOrUpdateProgressBar();
-
         SetConfig();
-        //BlockData =  new BlockDataPackage(Objects, ObjectInScene, BlockSize);
+
         TrialIndex = 0;
-
-        //Debug.Log($"There are {ObjectInScene} objects in the scene at each time");
-
 
         interactor.UserID = UserName;
         interactor.OnSelectTrue += HandleSelectTrue;
@@ -284,14 +266,6 @@ public class SimpleTestManager : MonoBehaviour
         }
     }
 
-    //public void UpdateProgressBar(float value)
-    //{
-    //    if (progressBar != null)
-    //    {
-    //        progressBar.value = value;
-    //    }
-    //}
-
     public void ResetObjects()
     {
 
@@ -309,12 +283,12 @@ public class SimpleTestManager : MonoBehaviour
     {
         if (interactor.LastObject != null)
         {
-            //interactor.LastObject.GetComponentInChildren<MeshRenderer>().sharedMaterial.SetFloat("_Highlighted", 0);
+
             Renderer currentRenderer = interactor.LastObject.transform.Find("default").GetComponent<MeshRenderer>();
             currentRenderer.sharedMaterial = originalMaterial;
         }
 
-        //interactor.TargetObject.GetComponentInChildren<MeshRenderer>().sharedMaterial.SetFloat("_Highlighted", 1);
+
         Renderer nextRenderer = interactor.TargetObject.transform.Find("default").GetComponent<MeshRenderer>();
         nextRenderer.sharedMaterial = glowMaterial;
     }
@@ -326,25 +300,19 @@ public class SimpleTestManager : MonoBehaviour
 
     public void HandleSelectTrue(object sender, EventArgs e)
     {
-        Debug.Log($"xxxx interactor.Target.id: {interactor.Target.ObjID}");
-        // ResetObjects();
-        // Update trial data
         CorrectGrasp();
     }
 
     public void HandleSelectFalse(object sender, EventArgs e)
     {   
-        // ResetObjects();
         WrongGrasp();
     }
 
     public void HandleSelectEnd(object sender, EventArgs e)
     {   
         ResetObjects();
-        //UpdateCandidate();
+
         ReHighlight();
-        //interactor.ReHighlight();
-        //Debug.Log($"ReHighlight called on: {interactor.TargetObject.name}");
     }
 
     public void HandleSelectInterrupt(object sender, EventArgs e)
@@ -358,28 +326,23 @@ public class SimpleTestManager : MonoBehaviour
         CurrentDistance = config.AngularDistance;
         Occlusion = config.Occlusion;
         interactor.GestureWeight = config.Weight;
-        Debug.Log($"{UserName}'s Current session type: {SessionType}");
     }
    
     public void InvokeTest()
     {
         UpdateTarget();
         ReHighlight();
-        //interactor.ReHighlight();
-        //Debug.Log($"ReHighlight called on: {interactor.TargetObject.name}");
-        //UpdateCandidate();
     }
 
     public void UpdateTarget()
     {   
         
-        //UpdateCounter();
-        //DistanceHandGrabInteractable target = BlockData.GetTarget(TrialIndex);
+
         GameObject currentObject = Objects[TrialIndex];
         TargetObjectName = currentObject.name;
         WrongGraspCount = 0;
         GraspingStartTime = System.DateTime.Now;
-        Debug.Log($"GraspingStartTime: {GraspingStartTime.ToString("yyyy-MM-dd HH:mm:ss")}");
+
         DistanceHandGrabInteractable target = currentObject.GetComponentInChildren<DistanceHandGrabInteractable>();
 
         target.ObjID = TrialIndex + 1;
@@ -387,33 +350,9 @@ public class SimpleTestManager : MonoBehaviour
         interactor.TargetObject = target.GetGameObject();
 
         interactor.Target = target;
-        Debug.Log($"target.ObjID: {target.ObjID}");
-        //interactor.Target.ObjID = target.ObjID;
+
         interactor.ResetPerformance();
     }
-
-    //public void UpdateCandidate()
-    //{
-    //    List<DistanceHandGrabInteractable> candidates = BlockData.GetCandidates(TrialIndex);
-    //    if (Occlusion)
-    //    {
-    //        List<DistanceHandGrabInteractable> occlusionList = BlockData.GetOcclusionList(TrialIndex);
-    //        // SetObjectPosition(candidates, occlusionList);
-    //        // HideOtherObjects(candidates, occlusionList);
-    //    } 
-    //    else
-    //    {
-    //        // AssignCandidatePositions(candidates);
-    //        // HideOtherObjects(candidates);
-    //    }
-        
-    //}
-
-    //public void UpdateCounter()
-    //{
-    //    string Counter = $"{TrialIndex}/{BlockSize}";
-    //    CounterText.text = Counter;
-    //}
     
     public AudioSource audioSource;
 
@@ -476,12 +415,8 @@ public class SimpleTestManager : MonoBehaviour
         
 
         TrialIndex++;
-        //Debug.Log($"xxxx TrialIndex: {TrialIndex}");
-        //Debug.Log($"xxxx Objects.Length: {Objects.Length}");
         if (TrialIndex >= Objects.Length)
         {
-            Debug.Log("xxxx if (TrialIndex >= Objects.Length)");
-            //MetricsCalculator.ComputeMetrics(UserName);
             Debug.Log($"Quit()");
             Quit();
         }
