@@ -8,6 +8,7 @@ using TMPro;
 using UnityEngine;
 using System.Linq;
 using UnityEngine.UI;
+using Oculus.Interaction;
 
 [DefaultExecutionOrder(100)]
 public class SimpleTestManager : MonoBehaviour
@@ -64,6 +65,15 @@ public class SimpleTestManager : MonoBehaviour
     private System.DateTime GraspingStartTime;
     private System.DateTime GraspingEndTime;
 
+    private List<string> gestureLogFlags = new List<string>();
+    private List<string> gestureLogTargetNames = new List<string>();
+    private List<string> gestureLogAllScores = new List<string>();
+    private List<string> gestureLogHandJoints = new List<string>();
+    private List<string> OjectLogObjectInfo = new List<string>();
+    private List<string> GraspingLogInfo = new List<string>();
+
+    
+
     private void Awake()
     {
         start_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss.fff");
@@ -89,13 +99,18 @@ public class SimpleTestManager : MonoBehaviour
     {
         Objects = this.GetComponent<TrackData>().Objects;
 
-
         foreach (var obj in Objects)
         {
-            if (obj != null)
-            {
-                initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
-            }
+            if (obj == null) continue;
+
+            initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
+
+            string position = $"{obj.transform.position.x}|{obj.transform.position.y}|{obj.transform.position.z}";
+            string eulerAngles = $"{obj.transform.eulerAngles.x}|{obj.transform.eulerAngles.y}|{obj.transform.eulerAngles.z}";
+            string rotation = $"{obj.transform.rotation.x}|{obj.transform.rotation.y}|{obj.transform.rotation.z}|{obj.transform.rotation.w}";
+
+            string[] objectInfoData = { obj.name, position, eulerAngles, rotation };
+            OjectLogObjectInfo.Add(string.Join(",", objectInfoData));
         }
 
         CounterText = CounterUI.GetComponentInChildren<TextMeshProUGUI>();
@@ -298,13 +313,57 @@ public class SimpleTestManager : MonoBehaviour
         CreateOrUpdateProgressBar();
     }
 
-    public void HandleSelectTrue(object sender, EventArgs e)
+    private void LogGesture(bool correctGestureFlag)
     {
+        string flag = correctGestureFlag ? "1" : "0";
+
+        HandVisual hand = this.GetComponent<TrackData>().currentHand;
+
+        IList<Transform> joints = hand.Joints;  
+        List<string> jointStrings = new List<string>();
+
+        foreach (var joint in joints)
+        {
+            string jointInfo = $"{joint.position.x}|{joint.position.y}|{joint.position.z}";
+            jointStrings.Add(jointInfo);
+        }
+
+        string allJoints = string.Join("/", jointStrings);
+
+        List<string> scoreList = new List<string>();
+
+        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
+        {
+            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+
+            if (parts.Length >= 5)
+            {
+                string name = parts[0];
+                float gestureScoreCandidateScores = float.Parse(parts[1]);
+                float posScoreCandidateScores = float.Parse(parts[2]);
+                float gestureWeightCandidateScores = float.Parse(parts[3]);
+                float finalScoreCandidateScores = float.Parse(parts[4]);
+                string scoreEntryString = $"{name}|{gestureScoreCandidateScores}|{posScoreCandidateScores}|{gestureWeightCandidateScores}|{finalScoreCandidateScores}";
+                scoreList.Add(scoreEntryString);
+            }
+        }
+        string allScores = string.Join("/", scoreList);
+        string combinedInfo = $"{flag},{TargetObjectName},{allJoints},{allScores}";
+        gestureLogAllScores.Add(combinedInfo);
+
+
+    }
+
+    public void HandleSelectTrue(object sender, EventArgs e)
+    {   
+        LogGesture(true);
         CorrectGrasp();
     }
 
     public void HandleSelectFalse(object sender, EventArgs e)
     {   
+        LogGesture(false);
         WrongGrasp();
     }
 
@@ -366,57 +425,28 @@ public class SimpleTestManager : MonoBehaviour
 
         System.DateTime GraspingEndTime = System.DateTime.Now;
 
-        Dictionary<string, (float, float, float, float)> scoresDictionary = new Dictionary<string, (float, float, float, float)>();
-
-        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
-        {
-            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-            Debug.Log($"Split result: {string.Join(", ", parts)}");
-
-            if (parts.Length >= 5)
-            {
-                string name = parts[0];
-                float gestureScoreCandidateScores = float.Parse(parts[1]);
-                float posScoreCandidateScores = float.Parse(parts[2]);
-                float gestureWeightCandidateScores = float.Parse(parts[3]);
-                float finalScoreCandidateScores = float.Parse(parts[4]);
-
-                scoresDictionary[name] = (gestureScoreCandidateScores, posScoreCandidateScores, gestureWeightCandidateScores, finalScoreCandidateScores);
-            }
-        }
-
-
-
-        scoresDictionary.TryGetValue(TargetObjectName, out var scores);
-    
-        var (gestureScore, posScore, gestureWeight, finalScore) = scores;
-
         var data = new string[] {
             TargetObjectName,
             WrongGraspCount.ToString(),
             GraspingStartTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
             GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-            gestureScore.ToString(),
-            posScore.ToString(),
-            gestureWeight.ToString(),
-            finalScore.ToString()
         };
 
-
+        GraspingLogInfo.Add(string.Join(",", data));
         
-        string LogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{SessionType}.csv";
+        // string LogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{SessionType}.csv";
 
-        using (StreamWriter writer = new StreamWriter(LogPath, true))
-        {
-            writer.WriteLine(string.Join(",", data));
-        }
+        // using (StreamWriter writer = new StreamWriter(LogPath, true))
+        // {
+        //     writer.WriteLine(string.Join(",", data));
+        // }
 
         
 
         TrialIndex++;
         if (TrialIndex >= Objects.Length)
         {
+            WriteLogs();
             Debug.Log($"Quit()");
             Quit();
         }
@@ -429,8 +459,39 @@ public class SimpleTestManager : MonoBehaviour
         WrongGraspCount++;
     }
 
+    private void WriteLogs()
+    {   
+        string objectInfoLogPath = $"../DistanceGrasp/Assets/LogData/ObjectData_{start_timestamp}_{SessionType}.csv";
+        using (StreamWriter writer = new StreamWriter(objectInfoLogPath, true))
+        {
+            foreach (var line in OjectLogObjectInfo)
+            {
+                writer.WriteLine(line); 
+            }
+        }
+
+        string GestureLogPath = $"../DistanceGrasp/Assets/LogData/GestureData_{start_timestamp}_{SessionType}.csv";
+        using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
+        {
+            foreach (var line in gestureLogAllScores)
+            {
+                writer.WriteLine(line); 
+            }
+        }
+
+
+        string GraspingLogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{SessionType}.csv";
+        using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
+        {
+            foreach (var line in GraspingLogInfo)
+            {
+                writer.WriteLine(line); 
+            }
+        }
+    }
+
     public static void Quit()
-    {
+    {   
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
         #else

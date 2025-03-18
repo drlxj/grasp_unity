@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.Linq;
 
+[DefaultExecutionOrder(50)]
 public class TrackData : MonoBehaviour
 {
     UdpSocket socket;
@@ -102,6 +103,7 @@ public class TrackData : MonoBehaviour
             instance.transform.position = new Vector3(startPos.x + posX, posY, startPos.z + posZ);
 
             Objects[i] = instance; 
+
         }
 
         // if (Objects == null)

@@ -72,7 +72,8 @@ while True:
         print("Done")
 
 
-
+    # print("Object Positions:")
+    # print(obj_positions)
 
     # hand pose
     hand_joint_position_unity = torch.Tensor(telemetry_packet.hand_joint_position) # (n_joints, 3)
