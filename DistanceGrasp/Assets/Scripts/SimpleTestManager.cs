@@ -16,7 +16,6 @@ public class SimpleTestManager : MonoBehaviour
     [HideInInspector]
     public GameObject[] Objects;
 
-
     //public GameObject ObjectSet;
     //public GameObject BaseObject;    
 
@@ -69,10 +68,11 @@ public class SimpleTestManager : MonoBehaviour
     private List<string> gestureLogTargetNames = new List<string>();
     private List<string> gestureLogAllScores = new List<string>();
     private List<string> gestureLogHandJoints = new List<string>();
-    private List<string> OjectLogObjectInfo = new List<string>();
+    private List<string> ObjectLogObjectInfo = new List<string>();
     private List<string> GraspingLogInfo = new List<string>();
 
-    
+    private bool ObjectLogHasCollected = false;
+
 
     private void Awake()
     {
@@ -99,18 +99,13 @@ public class SimpleTestManager : MonoBehaviour
     {
         Objects = this.GetComponent<TrackData>().Objects;
 
+        
+
         foreach (var obj in Objects)
         {
             if (obj == null) continue;
 
             initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
-
-            string position = $"{obj.transform.position.x}|{obj.transform.position.y}|{obj.transform.position.z}";
-            string eulerAngles = $"{obj.transform.eulerAngles.x}|{obj.transform.eulerAngles.y}|{obj.transform.eulerAngles.z}";
-            string rotation = $"{obj.transform.rotation.x}|{obj.transform.rotation.y}|{obj.transform.rotation.z}|{obj.transform.rotation.w}";
-
-            string[] objectInfoData = { obj.name, position, eulerAngles, rotation };
-            OjectLogObjectInfo.Add(string.Join(",", objectInfoData));
         }
 
         CounterText = CounterUI.GetComponentInChildren<TextMeshProUGUI>();
@@ -132,6 +127,40 @@ public class SimpleTestManager : MonoBehaviour
         interactor.OnSelectInterrupt += HandleSelectInterrupt;
 
         InvokeTest();
+    }
+
+    private void tryCollectObjectLog()
+    {
+        if (!ObjectLogHasCollected)
+        {
+            try
+            {
+                TelemetryMessage firstMessage = this.GetComponent<TrackData>().currentMessage;
+                // Debug.Log("objectStates length: " + currentMessage.objectStates.Length);
+                for (int i = 0; i < firstMessage.objectStates.Length; i++)
+                {
+                    ObjectState objectState = firstMessage.objectStates[i];
+                    ObjectType objectType = objectState.objectType;
+                    int objectTypeValue = (int)objectType;
+                    string objectTypeString = objectTypeValue.ToString();
+
+                    Quaternion rotation = objectState.orientation;
+                    string rotationString = $"{rotation.x}|{rotation.y}|{rotation.z}|{rotation.w}";
+
+                    Vector3 position = objectState.position;
+                    string positionString = $"{position.x}|{position.y}|{position.z}";
+
+                    string[] objectInfoData = { objectTypeString, positionString, rotationString };
+                    ObjectLogObjectInfo.Add(string.Join(",", objectInfoData));
+                }
+                Debug.Log("private void tryCollectObjectLog()");
+                ObjectLogHasCollected = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"An error occurred while processing object states: {ex.Message}");
+            }
+        }
     }
 
     private void CreateOrUpdateProgressBar()
@@ -310,6 +339,7 @@ public class SimpleTestManager : MonoBehaviour
 
     void Update(){
         //ScoreText.text = string.Join("\n", interactor.candidateScores);
+        tryCollectObjectLog();
         CreateOrUpdateProgressBar();
     }
 
@@ -317,14 +347,20 @@ public class SimpleTestManager : MonoBehaviour
     {
         string flag = correctGestureFlag ? "1" : "0";
 
-        HandVisual hand = this.GetComponent<TrackData>().currentHand;
+        TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
 
-        IList<Transform> joints = hand.Joints;  
+        Quaternion rootRotation = currentMessage.rootRotation;
+        Vector3 rootPosition = currentMessage.rootPosition;
+        Vector3[] jointPositions = currentMessage.jointPositions;
+  
         List<string> jointStrings = new List<string>();
 
-        foreach (var joint in joints)
+        string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
+        string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+
+        foreach (var joint in jointPositions)
         {
-            string jointInfo = $"{joint.position.x}|{joint.position.y}|{joint.position.z}";
+            string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
             jointStrings.Add(jointInfo);
         }
 
@@ -349,7 +385,7 @@ public class SimpleTestManager : MonoBehaviour
             }
         }
         string allScores = string.Join("/", scoreList);
-        string combinedInfo = $"{flag},{TargetObjectName},{allJoints},{allScores}";
+        string combinedInfo = $"{flag},{TargetObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints},{allScores}";
         gestureLogAllScores.Add(combinedInfo);
 
 
@@ -464,7 +500,7 @@ public class SimpleTestManager : MonoBehaviour
         string objectInfoLogPath = $"../DistanceGrasp/Assets/LogData/ObjectData_{start_timestamp}_{SessionType}.csv";
         using (StreamWriter writer = new StreamWriter(objectInfoLogPath, true))
         {
-            foreach (var line in OjectLogObjectInfo)
+            foreach (var line in ObjectLogObjectInfo)
             {
                 writer.WriteLine(line); 
             }

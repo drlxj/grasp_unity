@@ -92,13 +92,13 @@ while True:
     # import trimesh
     # obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
     # hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
-
+    #
     # obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
     # hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
-
+    #
     # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
     # hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
-
+    #
     # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
     # scene.show()
 

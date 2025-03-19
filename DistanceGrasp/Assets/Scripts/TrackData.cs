@@ -193,7 +193,6 @@ public class TrackData : MonoBehaviour
         if (Time.time >= nextUpdateTime)
         {
             nextUpdateTime = Time.time + updateInterval;
-            TelemetryMessage currentMessage = new TelemetryMessage();
             OnJointUpdated(out TelemetryMessage message);
             currentMessage = message;
         }
