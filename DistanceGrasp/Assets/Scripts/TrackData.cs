@@ -31,6 +31,8 @@ public class TrackData : MonoBehaviour
     public float spacing = 0.1f; // CHANGE
     public float depth = -5f; // CHANGE
 
+    public TelemetryMessage currentMessage;
+
     System.Random rng = new System.Random();
 
     void FisherYatesShuffle(GameObject[] array)
@@ -191,7 +193,9 @@ public class TrackData : MonoBehaviour
         if (Time.time >= nextUpdateTime)
         {
             nextUpdateTime = Time.time + updateInterval;
-            OnJointUpdated();
+            TelemetryMessage currentMessage = new TelemetryMessage();
+            OnJointUpdated(out TelemetryMessage message);
+            currentMessage = message;
         }
     }
 
@@ -206,15 +210,15 @@ public class TrackData : MonoBehaviour
         return rootPosition;
     }
 
-    private void OnJointUpdated()
+    private void OnJointUpdated(out TelemetryMessage message)
     {
+        message = new TelemetryMessage();
         if (currentHand == null)
         {
             Debug.Log("Right Hand not exists.");
             return;
         }
 
-        TelemetryMessage message = new TelemetryMessage();
         message.packetIdx = packetId;
         packetId++;
 
