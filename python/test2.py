@@ -82,3 +82,11 @@ obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
 
 scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
 scene.show()
+
+obj_vertices = np.array(obj_pcl_mesh.vertices)  
+hand_vertices = np.array(hand_pcl_mesh.vertices)
+
+
+np.savez("scene.npz", obj_vertices=obj_vertices, hand_vertices=hand_vertices)
+
+print("Meshes saved successfully!")
