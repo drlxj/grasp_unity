@@ -2372,6 +2372,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _radius: 3
+--- !u!114 &993051669 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7215171681461543774, guid: f54012181eacade4ea242c65f804720f, type: 3}
+  m_PrefabInstance: {fileID: 1222055483}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb7623a8f0b49cf4dbaa40aea4d4be64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &1000851353
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3047,6 +3058,7 @@ MonoBehaviour:
   ScoreText: {fileID: 0}
   posScoreText: {fileID: 0}
   gesScoreText: {fileID: 0}
+  leftHand: {fileID: 993051669}
   audioSource: {fileID: 1281254550}
 --- !u!114 &1281254547
 MonoBehaviour:

@@ -16,6 +16,7 @@ public class SimpleTestManager : MonoBehaviour
     [HideInInspector]
     public GameObject[] Objects;
 
+
     //public GameObject ObjectSet;
     //public GameObject BaseObject;    
 
@@ -73,6 +74,8 @@ public class SimpleTestManager : MonoBehaviour
 
     private bool ObjectLogHasCollected = false;
 
+    public OVRHand leftHand;
+    private bool fingerIsPinching = false;
 
     private void Awake()
     {
@@ -327,7 +330,7 @@ public class SimpleTestManager : MonoBehaviour
     {
         if (interactor.LastObject != null)
         {
-
+            Debug.Log("if (interactor.LastObject != null)");
             Renderer currentRenderer = interactor.LastObject.transform.Find("default").GetComponent<MeshRenderer>();
             currentRenderer.sharedMaterial = originalMaterial;
         }
@@ -341,11 +344,28 @@ public class SimpleTestManager : MonoBehaviour
         //ScoreText.text = string.Join("\n", interactor.candidateScores);
         tryCollectObjectLog();
         CreateOrUpdateProgressBar();
+
+        if (IsLeftHandPinch() && !fingerIsPinching)
+        {
+            fingerIsPinching = true;
+            LogGesture(2);
+            interactor.LastObject = interactor.TargetObject;
+            CorrectGrasp();
+            ReHighlight();
+        }
+        else if (!IsLeftHandPinch())
+        {
+            fingerIsPinching = false;
+        }
     }
 
-    private void LogGesture(bool correctGestureFlag)
-    {
-        string flag = correctGestureFlag ? "1" : "0";
+    private void LogGesture(int correctGestureFlag)
+    {   
+        // correctGestureFlag: 
+        // 1: correct grasp
+        // 0: wrong grasp
+        // 2: left hand pinch
+        string flag = correctGestureFlag.ToString();
 
         TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
 
@@ -393,13 +413,21 @@ public class SimpleTestManager : MonoBehaviour
 
     public void HandleSelectTrue(object sender, EventArgs e)
     {   
-        LogGesture(true);
+        LogGesture(1);
+        // correctGestureFlag: 
+        // 1: correct grasp
+        // 0: wrong grasp
+        // 2: left hand pinch
         CorrectGrasp();
     }
 
     public void HandleSelectFalse(object sender, EventArgs e)
     {   
-        LogGesture(false);
+        LogGesture(0);
+        // correctGestureFlag: 
+        // 1: correct grasp
+        // 0: wrong grasp
+        // 2: left hand pinch
         WrongGrasp();
     }
 
@@ -533,6 +561,11 @@ public class SimpleTestManager : MonoBehaviour
         #else
         Application.Quit();
         #endif
+    }
+
+    private bool IsLeftHandPinch()
+    {
+        return leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
     }
 
 
