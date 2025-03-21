@@ -169,7 +169,7 @@ public class SimpleTestManager : MonoBehaviour
     private void CreateOrUpdateProgressBar()
     {
         if (!progressBars.Any())
-        {
+        {   
 
             foreach (var scoreEntry in interactor.candidateScores.Skip(1))
             {
