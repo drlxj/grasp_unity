@@ -22,7 +22,7 @@ sock = UdpComms(ip="127.0.0.1", out_queue=data_queue,
 # model = InferenceNet(config=model_config)
 # model.load()
 model = InferenceNet(**model_config).to('cpu')
-ckpt = torch.load(r'C:\Users\research\Documents\Xuejing Luo\grasping-unity\python\files\epoch_0119.tar', map_location=torch.device('cpu'))  # Force loading on CPU
+ckpt = torch.load(r'C:\Users\research\Documents\Xuejing Luo\grasping-unity\python\files\0012_acc_pos.tar', map_location=torch.device('cpu'))  # Force loading on CPU
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()
 
@@ -38,10 +38,17 @@ count = 0
 
 R_unity2python = torch.Tensor(
     [
-            [-1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0,],
-            [0.0, 0.0, 1.0,],
-        ]
+        [-1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0,],
+        [0.0, 0.0, 1.0,],
+    ]
+)
+R_camera = torch.Tensor(
+    [
+        [0.0, 0.0, 1.0],
+        [-1.0, 0.0, 0.0],
+        [0.0, -1.0, 0.0],
+    ]
 )
 T_quat_unity2python = torch.eye(4)
 T_quat_unity2python[1:, 1:] = -R_unity2python
@@ -89,18 +96,18 @@ while True:
     obj_transl =  torch.einsum("ij,nj->ni", R_unity2python, torch.tensor(obj_positions)) # (n_obj, 3)
     obj_pcl_global = (obj_pcl + obj_transl.unsqueeze(1)).detach()
     # # obj_dataset.visualize_obj(obj_names=obj_types, obj_pcls=obj_pcl_global, hand_joints=global_hand_joint_position_python) #
-    # import trimesh
-    # obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
-    # hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
-    #
-    # obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
-    # hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
-    #
-    # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
-    # hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
-    #
-    # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
-    # scene.show()
+    import trimesh
+    obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
+    hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
+    
+    obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
+    hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
+    
+    obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
+    hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
+    
+    scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
+    scene.show()
 
 
     """

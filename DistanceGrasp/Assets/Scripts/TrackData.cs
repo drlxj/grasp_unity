@@ -11,6 +11,9 @@ public class TrackData : MonoBehaviour
 {
     UdpSocket socket;
     public HandVisual currentHand;
+
+    // public GameObject CenterEyeAnchor;
+    public float heightOffset = 0.0f; // Offset from the eyes position
     public Transform ObjectCenter;
     [HideInInspector]
     public GameObject[] Objects;
@@ -27,12 +30,13 @@ public class TrackData : MonoBehaviour
     private long packetId = 0;
 
     public GameObject[] allObjects;
-    public int gridSize = 2; // CHANGE
-    public float spacing = 0.1f; // CHANGE
-    public float depth = -5f; // CHANGE
-
+    public float densityFactor = 1.0f; // 1.0 = Normal, <1.0 = Spread out, >1.0 = More compact
+    public Vector3 boxSize = new Vector3(1f, 1f, 1f); // Bounding box defining placement area
+    private int objectCount ; // Number of objects to place
+    public LayerMask objectLayer; // Set a layer for objects to check collisions
+    
+    public float depth = -5f; // CHANGE THIS TO CHANGE THE DEPTH OF THE OBJECTS
     public TelemetryMessage currentMessage;
-
     System.Random rng = new System.Random();
 
     void FisherYatesShuffle(GameObject[] array)
@@ -70,51 +74,43 @@ public class TrackData : MonoBehaviour
         Prefabs = Resources.LoadAll<GameObject>(PrefabFolderName);
         FisherYatesShuffle(Prefabs);
 
-        Objects = new GameObject[gridSize * gridSize]; 
+        objectCount = Prefabs.Length;
+
+        Objects = new GameObject[objectCount];
+        objNames = new string[objectCount];
 
         Vector3 startPos = transform.position;
-        float offset = (gridSize - 1) * spacing * 0.5f;
+        int attempts = 0;
 
-        //for (int row = 0; row < gridSize; row++)
-        //{
-        //    for (int col = 0; col < gridSize; col++)
-        //    {
-        //        distanceMap[row, col] = 2f;
-        //    }
-        //}
-
-        List<int> positionIndices = Enumerable.Range(0, gridSize * gridSize).ToList();
-        FisherYatesShuffleInt(positionIndices);
-
-        // Debug.Log("Shuffled positionIndices: " + string.Join(", ", positionIndices));
-
-        for (int i = 0; i < gridSize * gridSize; i++)
+        for (int i = 0; i < objectCount; i++)
         {
-            int randomIndex = positionIndices[i]; 
+            GameObject instance = Instantiate(Prefabs[i % Prefabs.Length]);
+            instance.name = Prefabs[i % Prefabs.Length].name;
+            bool placed = false;
 
-            GameObject instance = Instantiate(Prefabs[i]); 
-            instance.name = Prefabs[i].name;
+            while (!placed && attempts < 100) // Prevent infinite loops
+            {
+                Vector3 randomPos = new Vector3(
+                    startPos.x + UnityEngine.Random.Range(-boxSize.x / 2, boxSize.x / 2) * densityFactor,
+                    startPos.y + UnityEngine.Random.Range(-boxSize.y / 2, boxSize.y / 2) + heightOffset,
+                    startPos.z + UnityEngine.Random.Range(-boxSize.z / 2, boxSize.z / 2) * densityFactor + depth
+                );
 
-            int randRow = randomIndex / gridSize;
-            int randCol = randomIndex % gridSize;
+                Collider[] colliders = Physics.OverlapBox(randomPos, instance.transform.localScale / 2, Quaternion.identity, objectLayer);
 
-            float posX = randCol * spacing - offset;
-            float posY = depth;
-            float posZ = randRow * spacing - offset;
+                if (colliders.Length == 0) // Ensure no overlap
+                {
+                    instance.transform.position = randomPos;
+                    placed = true;
+                }
+                attempts++;
+            }
 
-            instance.transform.position = new Vector3(startPos.x + posX, posY, startPos.z + posZ);
-
-            Objects[i] = instance; 
-
+            Objects[i] = instance;
+            objNames[i] = instance.name;
         }
 
-        // if (Objects == null)
-        // {
-        //     Debug.LogError("No Objs Exist");
-        // }
-
-        objCount = Objects.Count();
-        objNames = new string[objCount];
+        Debug.Log($"Placed {objectCount} objects within a box of size {boxSize}.");
 
         string objLog = $"Initial {objCount} objects: ";
         for (int i = 0; i < objCount; i++)
@@ -124,17 +120,6 @@ public class TrackData : MonoBehaviour
 
         }
         Debug.Log(objLog);
-
-        // FisherYatesShuffle(Objects);
-
-
-        //for (int i = 0; i < allObjects.Length; i++)
-        //{
-        //    //Vector3 position = new Vector3(i % gridSize, -1f, i / gridSize);
-        //    //GameObject instance = Instantiate(allObjects[i], position, Quaternion.identity);
-
-        //    instance.name = allObjects[i].name;
-        //}
 
     }
 
@@ -166,7 +151,7 @@ public class TrackData : MonoBehaviour
 
     void Start()
     {
-
+        
         // if (Objects == null)
         // {
         //     Debug.LogError("No Objs Exist");

@@ -294,7 +294,8 @@ namespace Oculus.Interaction.HandGrab
 
             Vector3 offset = Vector3.zero;
             if (IsGestureProbability)
-            {
+            {   
+                // todo
                 offset = RelativePosList[SelectedInteractable.GetObjName()];
                 SelectedInteractable.ObjectOffset = offset;
             }

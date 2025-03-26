@@ -285,7 +285,7 @@ namespace Oculus.Interaction
             // calculate the intersection of hand and plane
             point = CalculateIntersection(handPosition, normalizedBodyHandDirection, centerPosition);
 
-            DrawPoint(point);
+            // DrawPoint(point);
 
             // Debug.Log($"point++++: {point}");
 
@@ -307,15 +307,15 @@ namespace Oculus.Interaction
 
         private Vector3 CalculateIntersection(Vector3 handPosition, Vector3 handDirection, Vector3 centerPosition)
         {
-            float planeY = centerPosition.y;
+            float planeZ = centerPosition.z;
 
 
-            float lambda = (planeY - handPosition.y) / handDirection.y;
+            float lambda = (planeZ - handPosition.z) / handDirection.z;
             float x = handPosition.x + lambda * handDirection.x;
-            float z = handPosition.z + lambda * handDirection.z;
-            float y = centerPosition.y;
+            float z = centerPosition.z;
+            float y = handPosition.y + lambda * handDirection.y;
 
-            return new Vector3(x, planeY, z); // return intersection
+            return new Vector3(x, y, planeZ); // return intersection
         }
 
         private float CalculateGaussianProbability(Vector3 point, Vector3 mean, float sigma)
@@ -331,7 +331,7 @@ namespace Oculus.Interaction
             renderer.material.color = Color.red;
             sphere.transform.position = point;
             sphere.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f); 
-            Destroy(sphere, 0.3f);
+            Destroy(sphere, 0.2f);
         }
 
         private void DrawGaussianCircle(Vector3 center, int circleResolution, float sigma)

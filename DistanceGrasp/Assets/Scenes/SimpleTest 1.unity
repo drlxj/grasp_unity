@@ -2847,6 +2847,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7762121449023851175, guid: f54012181eacade4ea242c65f804720f, type: 3}
+      propertyPath: m_Radius
+      value: 0.025
+      objectReference: {fileID: 0}
+    - target: {fileID: 7762121449023851175, guid: f54012181eacade4ea242c65f804720f, type: 3}
+      propertyPath: m_ProvidesContacts
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7762121450436992963, guid: f54012181eacade4ea242c65f804720f, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -3006,12 +3014,14 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   Prefabs: []
-  PrefabFolderName: Prefab3
+  PrefabFolderName: Prefab
   objNames: []
   allObjects: []
-  gridSize: 2
-  spacing: 0.2
-  depth: -2
+  densityFactor: 1
+  boxSize: {x: 0.25, y: 1, z: 0.25}
+  objectLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!4 &1281254545
 Transform:
   m_ObjectHideFlags: 0

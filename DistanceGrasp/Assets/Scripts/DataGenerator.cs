@@ -27,9 +27,9 @@ public class DataGenerator : MonoBehaviour
     {
         Objects = this.GetComponent<TrackData>().Objects;
         objectCount = Objects.Length;
-        BlockSize = this.GetComponent<ControlTaskManager>().BlockSize;
+        //BlockSize = this.GetComponent<ControlTaskManager>().BlockSize;
         //BlockSize = 18;
-        ObjectDisplayed = this.GetComponent<ControlTaskManager>().ObjectDisplayed;
+        //ObjectDisplayed = this.GetComponent<ControlTaskManager>().ObjectDisplayed;
         //ObjectDisplayed = 25;
         MatrixSize = (int)Math.Sqrt(ObjectDisplayed);;
 

@@ -26,6 +26,18 @@ class InferenceNet(nn.Module):
         bps_fname = Path(bps_params["filepath"], "bps_new.npz")
         bps_dtype = dtype_mapping[bps_params["dtype"]]
 
+        # self.model = nn.Sequential(
+        #     nn.Linear(1084, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 256),
+        #     nn.ReLU(),
+        #     nn.Linear(256, 64),
+        #     nn.ReLU(),
+        #     nn.Linear(64, 1),  # Binary classification (graspable or not)
+        #     nn.Sigmoid()
+        # )
+
+        # V1:
         self.model = nn.Sequential(
             nn.Linear(1084, 512),
             nn.ReLU(),
@@ -33,9 +45,9 @@ class InferenceNet(nn.Module):
             nn.ReLU(),
             nn.Linear(256, 64),
             nn.ReLU(),
-            nn.Linear(64, 1),  # Binary classification (graspable or not)
-            nn.Sigmoid()
         )
+        self.decoder_logit = nn.Sequential(nn.Linear(64, 1), nn.Sigmoid())
+        self.decoder_position = nn.Linear(64, 3)
         self.compute_total_params()
     
     def compute_total_params(self, str="inference_net"):
@@ -46,13 +58,24 @@ class InferenceNet(nn.Module):
       print(f"[ {str} ] total trainable parameters : {self.total_params}")
 
     
+    # def forward(self, hand_joints, obj_bps):
+    #     # obj_bps = self.bps.encode(obj_pcl, feature_type=["dists"])["dists"]
+    #     x = torch.cat([obj_bps, hand_joints], dim=1)
+    #     # enc_hand_obj = self.encoder_sbjobj(x)
+    #     # logit = self.decoder_logit(enc_hand_obj)
+    #     logit = self.model(x)
+    #     predictions = {"obj_logit": logit, "obj_translation": torch.zeros(logit.shape[0], 3)}
+    #     return predictions
+
+    # V1
     def forward(self, hand_joints, obj_bps):
-        # obj_bps = self.bps.encode(obj_pcl, feature_type=["dists"])["dists"]
         x = torch.cat([obj_bps, hand_joints], dim=1)
-        # enc_hand_obj = self.encoder_sbjobj(x)
-        # logit = self.decoder_logit(enc_hand_obj)
-        logit = self.model(x)
-        predictions = {"obj_logit": logit, "obj_translation": torch.zeros(logit.shape[0], 3)}
+       
+        enc = self.model(x)
+        logit = self.decoder_logit(enc)
+        position = self.decoder_position(enc)
+ 
+        predictions = {"obj_logit": logit, "obj_translation": position}
         return predictions
     
     def load(self, ckpt_path):
