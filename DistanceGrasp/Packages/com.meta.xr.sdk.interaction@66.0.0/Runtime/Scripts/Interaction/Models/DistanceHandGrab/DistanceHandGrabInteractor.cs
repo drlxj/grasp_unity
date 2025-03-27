@@ -295,7 +295,6 @@ namespace Oculus.Interaction.HandGrab
             Vector3 offset = Vector3.zero;
             if (IsGestureProbability)
             {   
-                // todo
                 offset = RelativePosList[SelectedInteractable.GetObjName()];
                 SelectedInteractable.ObjectOffset = offset;
             }
@@ -502,6 +501,9 @@ namespace Oculus.Interaction.HandGrab
             {
                 offset = new Vector3(0,0,0);
             }
+            // ATTENTION: at python program, there is matrix R_unity2python = [[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], as you can see that the x-axis is reversed, so there should be a negative sign
+            // offset.x *= -1;
+
             // TODO: GetPoseOffset in HandGrabInteraction.cs are be refered in many areas
             Pose pose;
             this.Hand.GetRootPose(out pose);

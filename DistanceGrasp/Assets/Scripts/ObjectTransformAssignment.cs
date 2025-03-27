@@ -146,6 +146,11 @@ public class ObjectTransformAssignment : MonoBehaviour
             matrix_python.SetRow(1, new Vector4(object_rotation_matrix[1][0], object_rotation_matrix[1][1], object_rotation_matrix[1][2], 0));
             matrix_python.SetRow(2, new Vector4(object_rotation_matrix[2][0], object_rotation_matrix[2][1], object_rotation_matrix[2][2], 0));
             matrix_python.SetRow(3, new Vector4(0, 0, 0, 1));  // Set the last row for a valid transformation matrix
+            Debug.Log("-------");
+            Debug.Log(matrix_python.GetRow(0));
+            Debug.Log(matrix_python.GetRow(1));
+            Debug.Log(matrix_python.GetRow(2));
+            Debug.Log(matrix_python.GetRow(3));
 
             Matrix4x4 matrix_unity = T_camera* T_unity2python * matrix_python * T_unity2python;
 
