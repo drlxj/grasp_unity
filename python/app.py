@@ -73,7 +73,7 @@ while True:
 
         obj_rot_matrices = quaternion_to_matrix(obj_quats_python) # (n_objects, 3, 3)
         obj_rot_matrices = torch.einsum("ik,nkj->nij", R_camera, obj_rot_matrices)
-        print("obj_quats_python:", obj_rot_matrices)
+        # print("obj_quats_python:", obj_rot_matrices)
         obj_positions = telemetry_packet.object_positions
 
         # obj_dataset.visualize_obj(obj_types, obj_rot_matrices)
@@ -128,19 +128,19 @@ while True:
     # transls: (n_objcts, 3)
     # obj_transls = torch.einsum("ij,nj->ni", yz_swap_matrix, obj_transls)
 
-    import trimesh
-    obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
-    hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
+    # import trimesh
+    # obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
+    # hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
     
-    obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
-    hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
+    # obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
+    # hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
     
-    # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0]+obj_transl[0], colors=obj_pcl_colors)
-    obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0]+obj_transls.detach().cpu().numpy()[0], colors=obj_pcl_colors)
-    hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
+    # # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0]+obj_transl[0], colors=obj_pcl_colors)
+    # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0]+obj_transls.detach().cpu().numpy()[0], colors=obj_pcl_colors)
+    # hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
     
-    scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
-    scene.show()
+    # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
+    # scene.show()
 
     """
     Sending
