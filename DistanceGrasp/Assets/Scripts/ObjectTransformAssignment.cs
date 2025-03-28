@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Meta.WitAi.Json;
 using UnityEngine;
+using System;
 
 // public class ObjectTransformData
 // {
@@ -75,6 +76,8 @@ public class ObjectTransformAssignment : MonoBehaviour
     public string fileName; //"rotation_candidates_check_all";
     private Dictionary<string, ObjectTransformData> transformData;
 
+    public List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
+    
     // Start is called before the first frame update
     void Start()
     {
@@ -132,8 +135,8 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             ObjectTransformData object_transform_set = transformData[object_name];
 
-            // int randomIndex = Random.Range(0, object_transform_set.seq_name.Count);
-            int randomIndex = 0;
+            int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);
+            // int randomIndex = 0;
             // if (object_name == "waterbottle")
             //     randomIndex = 290;
 
@@ -146,11 +149,11 @@ public class ObjectTransformAssignment : MonoBehaviour
             matrix_python.SetRow(1, new Vector4(object_rotation_matrix[1][0], object_rotation_matrix[1][1], object_rotation_matrix[1][2], 0));
             matrix_python.SetRow(2, new Vector4(object_rotation_matrix[2][0], object_rotation_matrix[2][1], object_rotation_matrix[2][2], 0));
             matrix_python.SetRow(3, new Vector4(0, 0, 0, 1));  // Set the last row for a valid transformation matrix
-            Debug.Log("-------");
-            Debug.Log(matrix_python.GetRow(0));
-            Debug.Log(matrix_python.GetRow(1));
-            Debug.Log(matrix_python.GetRow(2));
-            Debug.Log(matrix_python.GetRow(3));
+            // Debug.Log("-------");
+            // Debug.Log(matrix_python.GetRow(0));
+            // Debug.Log(matrix_python.GetRow(1));
+            // Debug.Log(matrix_python.GetRow(2));
+            // Debug.Log(matrix_python.GetRow(3));
 
             Matrix4x4 matrix_unity = T_camera* T_unity2python * matrix_python * T_unity2python;
 
@@ -180,6 +183,8 @@ public class ObjectTransformAssignment : MonoBehaviour
             // Debug.Log($"object_quaternion: ({current_object.transform.rotation.w}, {current_object.transform.rotation.x}, {current_object.transform.rotation.y}, {current_object.transform.rotation.z})");
             // current_object.transform.position = object_translation;
             Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} index {randomIndex} with matrix"  + string.Join(", ", object_rotation_matrix));
+
+            RotationSeqNameObjectList.Add(new Tuple<string, string>(object_name, object_transform_set.seq_name[randomIndex]));
 
             // === HAND JOINTS VISUALIZATION ===
             //List<float> object_translation_list = object_transform_set.object_translation[randomIndex];

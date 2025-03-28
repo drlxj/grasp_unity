@@ -71,6 +71,7 @@ public class SimpleTestManager : MonoBehaviour
     private List<string> gestureLogHandJoints = new List<string>();
     private List<string> ObjectLogObjectInfo = new List<string>();
     private List<string> GraspingLogInfo = new List<string>();
+    private List<string> AllGestureAndScoresInfo = new List<string>();
 
     private bool ObjectLogHasCollected = false;
 
@@ -340,10 +341,12 @@ public class SimpleTestManager : MonoBehaviour
         nextRenderer.sharedMaterial = glowMaterial;
     }
 
-    void Update(){
+    void Update()
+    {
         //ScoreText.text = string.Join("\n", interactor.candidateScores);
         tryCollectObjectLog();
         CreateOrUpdateProgressBar();
+        logAllGestureAndScores();
 
         if (IsLeftHandPinch() && !fingerIsPinching)
         {
@@ -357,6 +360,49 @@ public class SimpleTestManager : MonoBehaviour
         {
             fingerIsPinching = false;
         }
+    }
+
+    private void logAllGestureAndScores()
+    {
+        TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
+        Quaternion rootRotation = currentMessage.rootRotation;
+        Vector3 rootPosition = currentMessage.rootPosition;
+        Vector3[] jointPositions = currentMessage.jointPositions;
+  
+        List<string> jointStrings = new List<string>();
+
+        string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
+        string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+
+        foreach (var joint in jointPositions)
+        {
+            string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
+            jointStrings.Add(jointInfo);
+        }
+
+        string allJoints = string.Join("/", jointStrings);
+
+        List<string> scoreList = new List<string>();
+
+        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
+        {
+            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+
+            if (parts.Length >= 5)
+            {
+                string name = parts[0];
+                float gestureScoreCandidateScores = float.Parse(parts[1]);
+                float posScoreCandidateScores = float.Parse(parts[2]);
+                float gestureWeightCandidateScores = float.Parse(parts[3]);
+                float finalScoreCandidateScores = float.Parse(parts[4]);
+                string scoreEntryString = $"{name}|{gestureScoreCandidateScores}|{posScoreCandidateScores}|{gestureWeightCandidateScores}|{finalScoreCandidateScores}";
+                scoreList.Add(scoreEntryString);
+            }
+        }
+        string allScores = string.Join("/", scoreList);
+        string combinedInfo = $"{TargetObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints},{allScores}";
+        AllGestureAndScoresInfo.Add(combinedInfo);
     }
 
     private void LogGesture(int correctGestureFlag)
@@ -548,6 +594,27 @@ public class SimpleTestManager : MonoBehaviour
         using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
         {
             foreach (var line in GraspingLogInfo)
+            {
+                writer.WriteLine(line); 
+            }
+        }  
+
+        List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
+
+        RotationSeqNameObjectList = this.GetComponent<ObjectTransformAssignment>().RotationSeqNameObjectList;
+        string RotationSeqLogPath = $"../DistanceGrasp/Assets/LogData/RotationSeqData_{start_timestamp}_{SessionType}.csv";
+        using (StreamWriter writer = new StreamWriter(RotationSeqLogPath, true))
+        {
+            foreach (var line in RotationSeqNameObjectList)
+            {
+                writer.WriteLine($"{line.Item1},{line.Item2}"); 
+            }
+        }
+
+        string AllGestureAndScoresLogPath = $"../DistanceGrasp/Assets/LogData/AllGestureAndScoresData_{start_timestamp}_{SessionType}.csv";
+        using (StreamWriter writer = new StreamWriter(AllGestureAndScoresLogPath, true))
+        {
+            foreach (var line in AllGestureAndScoresInfo)
             {
                 writer.WriteLine(line); 
             }
