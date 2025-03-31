@@ -2,11 +2,18 @@ import numpy as np
 import trimesh
 
 
-data = np.load("scene.npz")
+data = np.load("./session_npz_files/20250328_161221.843_I/bowl/bowl.npz")
 
 
 obj_vertices = data["obj_vertices"]
 hand_vertices = data["hand_vertices"]
+seq = data["seq"]
+target_obj_scores = data["target_obj_scores"]
+obj_scores = data["obj_scores"]
+
+print(seq)
+print(target_obj_scores)
+print(obj_scores)
 
 obj_colors = np.tile([255, 0, 0, 255], (obj_vertices.shape[0], 1))   # 红色
 
