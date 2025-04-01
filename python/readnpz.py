@@ -2,7 +2,7 @@ import numpy as np
 import trimesh
 
 
-data = np.load("./session_npz_files/20250328_161221.843_I/bowl/bowl.npz")
+data = np.load("./session_npz_files/20250331_151156.961_I/bowl/bowl.npz")
 
 
 obj_vertices = data["obj_vertices"]

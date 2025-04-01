@@ -123,7 +123,6 @@ namespace Oculus.Interaction
 
             ConicalFrustum searchFrustrum = (isSelecting || _frustums.DeselectionFrustum == null) ?
                 _frustums.SelectionFrustum : _frustums.DeselectionFrustum;
-            // ConicalFrustum searchFrustrum = _frustums.SelectionFrustum;
             bestHitPoint = Vector3.zero;
             bestScore = 0f;
             bool anyHit = false;
@@ -132,10 +131,6 @@ namespace Oculus.Interaction
             foreach (Collider collider in colliders)
             {
                 float score = 0f;
-                // if (!searchFrustrum.HitsCollider(collider, out score, out Vector3 hitPoint))
-                // {
-                //     continue;
-                // }
 
                 // pure hand
                 // if (!searchFrustrum.HitsColliderGaussianPureHand(collider, out score, out Vector3 hitPoint))
@@ -158,6 +153,13 @@ namespace Oculus.Interaction
                 //     continue;
                 // }
 
+                
+                // native method
+                // if (!searchFrustrum.HitsCollider(collider, out score, out Vector3 hitPoint))
+                // {
+                //     continue;
+                // }
+
                 // if (_frustums.AidFrustum != null)
                 // {
                 //     if (!_frustums.AidFrustum.HitsCollider(collider, out float headScore, out Vector3 headPosition))
@@ -167,25 +169,9 @@ namespace Oculus.Interaction
                 //     score = score * (1f - _frustums.AidBlending) + headScore * _frustums.AidBlending;
                 // }
 
-                // if (_frustums.AidFrustum != null)
-                // {
-                //     if (!_frustums.AidFrustum.HitsColliderGaussian(collider, out float headScore, out Vector3 headPosition))
-                //     {
-                //         continue;
-                //     }
-                //     score = score * (1f - _frustums.AidBlending) + headScore * _frustums.AidBlending;
-                // }
-
-                // if (!_frustums.AidFrustum.HitsCollider(collider, out float headScore, out Vector3 headPosition))
-                // {
-                //     continue;
-                // }
-                // score = headScore;
-
                 if (score > bestScore)
                 {
                     bestHitPoint = hitPoint;
-                    // bestHitPoint = headPosition;
                     bestScore = score;
                     anyHit = true;
                 }

@@ -299,7 +299,12 @@ namespace Oculus.Interaction
                     // Get position score of the candidate
                     if (!_detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint))
                     // check if user hand is in vision
-                    {
+                    {   
+                        DistanceHandGrabInteractable fakeTmp = candidate as DistanceHandGrabInteractable;
+                        string fakeName = fakeTmp.GetObjName();
+                        float fakeGestureScore = 0.0f;
+                        float fakeFinalScore = 0.0f;
+                        candidateScores.Add($"{fakeName,-15} {fakeGestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {fakeFinalScore,8:F4}");
                         continue;
                     }
                     

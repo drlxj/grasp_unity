@@ -187,21 +187,21 @@ public class ObjectTransformAssignment : MonoBehaviour
             RotationSeqNameObjectList.Add(new Tuple<string, string>(object_name, object_transform_set.seq_name[randomIndex]));
 
             // === HAND JOINTS VISUALIZATION ===
-            //List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
-            //Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
-            //List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
+            // List<float> object_translation_list = object_transform_set.object_translation[randomIndex];
+            // Vector3 object_translation = new Vector3(object_translation_list[0], object_translation_list[1], object_translation_list[2]);
+            // List<List<float>> joint_positions = object_transform_set.subject_joints_pos_rel2wrist[randomIndex];
             // joint_positions.Add(new List<float> { 0.0f, 0.0f, 0.0f }); // Add the root joint
             // Matrix4x4 transformationMatrix = T_camera * T_python2unity;
-            //foreach (Transform child in current_object.transform)
-            //{
+            // foreach (Transform child in current_object.transform)
+            // {
             //   if (child.name.StartsWith("Joint_"))
             //   {
             //       Destroy(child.gameObject);  // Clear previous joints
             //   }
-            //}
+            // }
 
-            //for (int j = 0; j < joint_positions.Count; j++)
-            //{
+            // for (int j = 0; j < joint_positions.Count; j++)
+            // {
             //   Vector3 joint_position = new Vector3(joint_positions[j][0], joint_positions[j][1], joint_positions[j][2]);
 
             //   // Apply transformation to align with Unity's coordinate system
@@ -240,7 +240,7 @@ public class ObjectTransformAssignment : MonoBehaviour
             //        }
             //    }
 
-            //}
+            // }
 
         }
     }
