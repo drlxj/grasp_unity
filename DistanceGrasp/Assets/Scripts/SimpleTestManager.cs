@@ -38,7 +38,9 @@ public class SimpleTestManager : MonoBehaviour
     //public int BlockSize = 1;
 
     [Tooltip("For Each Character's meaning, check line 13-23 in Session.cs")]
-    public char SessionType = 'N';
+    public string SessionTypes = "PC";
+    private char  SessionType;
+
     public GameObject CounterUI;
     private TextMeshProUGUI CounterText;
     public GameObject ScoreUI;
@@ -74,8 +76,8 @@ public class SimpleTestManager : MonoBehaviour
 
     private bool ObjectLogHasCollected = false;
 
-    public OVRHand leftHand;
-    private bool fingerIsPinching = false;
+    // public OVRHand leftHand;
+    // private bool fingerIsPinching = false;
 
     private void Awake()
     {
@@ -100,6 +102,7 @@ public class SimpleTestManager : MonoBehaviour
 // TODO: check out-of reach grasping with long distance 
     void Start()
     {   
+        SessionType = SessionTypes[0];
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
         PlayerPrefs.Save();
         Objects = this.GetComponent<TrackData>().Objects;
@@ -346,19 +349,6 @@ public class SimpleTestManager : MonoBehaviour
         tryCollectObjectLog();
         CreateOrUpdateProgressBar();
         logAllGestureAndScores();
-
-        if (IsLeftHandPinch() && !fingerIsPinching)
-        {
-            fingerIsPinching = true;
-            LogGesture(2);
-            interactor.LastObject = interactor.TargetObject;
-            CorrectGrasp();
-            ReHighlight();
-        }
-        else if (!IsLeftHandPinch())
-        {
-            fingerIsPinching = false;
-        }
     }
 
     private void logAllGestureAndScores()
@@ -409,7 +399,6 @@ public class SimpleTestManager : MonoBehaviour
         // correctGestureFlag: 
         // 1: correct grasp
         // 0: wrong grasp
-        // 2: left hand pinch
         string flag = correctGestureFlag.ToString();
 
         TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
@@ -462,7 +451,6 @@ public class SimpleTestManager : MonoBehaviour
         // correctGestureFlag: 
         // 1: correct grasp
         // 0: wrong grasp
-        // 2: left hand pinch
         CorrectGrasp();
     }
 
@@ -472,7 +460,6 @@ public class SimpleTestManager : MonoBehaviour
         // correctGestureFlag: 
         // 1: correct grasp
         // 0: wrong grasp
-        // 2: left hand pinch
         WrongGrasp();
     }
 
@@ -628,12 +615,6 @@ public class SimpleTestManager : MonoBehaviour
         Application.Quit();
         #endif
     }
-
-    private bool IsLeftHandPinch()
-    {
-        return leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
-    }
-
 
 }
 
