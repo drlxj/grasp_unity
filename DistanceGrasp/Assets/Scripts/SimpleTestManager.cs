@@ -39,7 +39,10 @@ public class SimpleTestManager : MonoBehaviour
 
     [Tooltip("For Each Character's meaning, check line 13-23 in Session.cs")]
     public string SessionTypes = "PC";
-    private char  SessionType;
+    private int SessionTypeIndex = 0;
+    private int SessionTypeCount;
+
+    private char SessionType;
 
     public GameObject CounterUI;
     private TextMeshProUGUI CounterText;
@@ -81,16 +84,30 @@ public class SimpleTestManager : MonoBehaviour
 
     private void Awake()
     {
+        SessionTypeCount = SessionTypes.Length;
         start_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss.fff");
+
+        interactor.UserID = UserName;
+        interactor.OnSelectTrue += HandleSelectTrue;
+        interactor.OnSelectFalse += HandleSelectFalse;
+        interactor.OnSelectEnd += HandleSelectEnd;
+        interactor.OnSelectInterrupt += HandleSelectInterrupt;
     }
 
 // TODO: the object doesn't return to the original place -> change control scene with less objects
 // TODO: check out-of reach grasping with long distance 
     void Start()
     {   
-        SessionType = SessionTypes[0];
+        if (SessionTypeIndex >= SessionTypeCount)
+        {   
+            Debug.Log($"Quit()");
+            Quit();
+        }
+        SessionType = SessionTypes[SessionTypeIndex];
+        SessionTypeIndex++;
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
         PlayerPrefs.Save();
+        
         Objects = this.GetComponent<TrackData>().Objects;
 
         foreach (var obj in Objects)
@@ -111,12 +128,6 @@ public class SimpleTestManager : MonoBehaviour
         SetConfig();
 
         TrialIndex = 0;
-
-        interactor.UserID = UserName;
-        interactor.OnSelectTrue += HandleSelectTrue;
-        interactor.OnSelectFalse += HandleSelectFalse;
-        interactor.OnSelectEnd += HandleSelectEnd;
-        interactor.OnSelectInterrupt += HandleSelectInterrupt;
 
         InvokeTest();
     }
@@ -331,53 +342,8 @@ public class SimpleTestManager : MonoBehaviour
 
     void Update()
     {
-        //ScoreText.text = string.Join("\n", interactor.candidateScores);
         tryCollectObjectLog();
         CreateOrUpdateProgressBar();
-        logAllGestureAndScores();
-    }
-
-    private void logAllGestureAndScores()
-    {
-        TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
-        Quaternion rootRotation = currentMessage.rootRotation;
-        Vector3 rootPosition = currentMessage.rootPosition;
-        Vector3[] jointPositions = currentMessage.jointPositions;
-  
-        List<string> jointStrings = new List<string>();
-
-        string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
-        string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
-
-        foreach (var joint in jointPositions)
-        {
-            string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
-            jointStrings.Add(jointInfo);
-        }
-
-        string allJoints = string.Join("/", jointStrings);
-
-        List<string> scoreList = new List<string>();
-
-        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
-        {
-            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-
-            if (parts.Length >= 5)
-            {
-                string name = parts[0];
-                float gestureScoreCandidateScores = float.Parse(parts[1]);
-                float posScoreCandidateScores = float.Parse(parts[2]);
-                float gestureWeightCandidateScores = float.Parse(parts[3]);
-                float finalScoreCandidateScores = float.Parse(parts[4]);
-                string scoreEntryString = $"{name}|{gestureScoreCandidateScores}|{posScoreCandidateScores}|{gestureWeightCandidateScores}|{finalScoreCandidateScores}";
-                scoreList.Add(scoreEntryString);
-            }
-        }
-        string allScores = string.Join("/", scoreList);
-        string combinedInfo = $"{TargetObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints},{allScores}";
-        AllGestureAndScoresInfo.Add(combinedInfo);
     }
 
     private void LogGesture(int correctGestureFlag)
@@ -518,10 +484,11 @@ public class SimpleTestManager : MonoBehaviour
 
         TrialIndex++;
         if (TrialIndex >= Objects.Length)
-        {
-            WriteLogs();
-            Debug.Log($"Quit()");
-            Quit();
+        {   
+            Start();
+            // WriteLogs();
+            // Debug.Log($"Quit()");
+            // Quit();
         }
         UpdateTarget();
         
@@ -571,15 +538,6 @@ public class SimpleTestManager : MonoBehaviour
             foreach (var line in RotationSeqNameObjectList)
             {
                 writer.WriteLine($"{line.Item1},{line.Item2}"); 
-            }
-        }
-
-        string AllGestureAndScoresLogPath = $"../DistanceGrasp/Assets/LogData/AllGestureAndScoresData_{start_timestamp}_{SessionType}.csv";
-        using (StreamWriter writer = new StreamWriter(AllGestureAndScoresLogPath, true))
-        {
-            foreach (var line in AllGestureAndScoresInfo)
-            {
-                writer.WriteLine(line); 
             }
         }
     }
