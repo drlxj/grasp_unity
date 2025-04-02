@@ -76,16 +76,9 @@ public class SimpleTestManager : MonoBehaviour
 // TODO: check out-of reach grasping with long distance 
     void Start()
     {   
-        if (SessionTypeIndex >= SessionTypeCount)
-        {   
-            writeObjectLog();
-            writeRotationSeqLog();
-            writeGestureLog();
-            WriteGraspingLog();
-            Quit();
-        }
         SessionType = SessionTypes[SessionTypeIndex];
         SessionTypeIndex++;
+        
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
         PlayerPrefs.Save();
 
@@ -329,7 +322,21 @@ public class SimpleTestManager : MonoBehaviour
         TrialIndex++;
         if (TrialIndex >= Objects.Length)
         {   
-            Start();
+            if (SessionTypeIndex >= SessionTypeCount)
+            {   
+                // If all sessions are finished, save the logs to CSV files
+                writeObjectLog();
+                writeRotationSeqLog();
+                writeGestureLog();
+                WriteGraspingLog();
+                Quit();
+            }
+            else
+            {
+                // If all trials are finished, move to the next session type
+                Start();
+            }
+            
         }
         UpdateTarget();
         
