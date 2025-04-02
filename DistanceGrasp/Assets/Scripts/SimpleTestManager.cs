@@ -39,7 +39,6 @@ public class SimpleTestManager : MonoBehaviour
 
     [Tooltip("For Each Character's meaning, check line 13-23 in Session.cs")]
     public char SessionType = 'N';
-
     public GameObject CounterUI;
     private TextMeshProUGUI CounterText;
     public GameObject ScoreUI;
@@ -100,10 +99,10 @@ public class SimpleTestManager : MonoBehaviour
 // TODO: the object doesn't return to the original place -> change control scene with less objects
 // TODO: check out-of reach grasping with long distance 
     void Start()
-    {
+    {   
+        PlayerPrefs.SetString("SessionType", SessionType.ToString());
+        PlayerPrefs.Save();
         Objects = this.GetComponent<TrackData>().Objects;
-
-        
 
         foreach (var obj in Objects)
         {
@@ -637,3 +636,4 @@ public class SimpleTestManager : MonoBehaviour
 
 
 }
+

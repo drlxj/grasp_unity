@@ -21,9 +21,9 @@ public class Session : MonoBehaviour
     private void OnEnable()
     {
         expConfigs.Add('B', new ExpConfig(0f, false, 0.4f)); // pure pointing, head-hand
+        expConfigs.Add('O', new ExpConfig(0f, true, 0.15f)); // pure pointing, native method
         expConfigs.Add('G', new ExpConfig(1f, true, 0.15f)); // pure gesture
         expConfigs.Add('I', new ExpConfig(0.5f, false, 0.15f)); // combi, pointing head-hand + gesture
-        expConfigs.Add('O', new ExpConfig(0f, true, 0.15f)); // pure pointing, native method
     }
 
     private void Start()
