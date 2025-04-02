@@ -470,6 +470,7 @@ public class OVRCameraRig : MonoBehaviour
         }
 #endif
 #endif
+        trackingSpace.localPosition = -1 * centerEyeAnchor.localPosition;
         RaiseUpdatedAnchorsEvent();
         CheckForTrackingSpaceChangesAndRaiseEvent();
     }
