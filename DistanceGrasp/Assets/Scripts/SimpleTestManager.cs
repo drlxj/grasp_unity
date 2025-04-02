@@ -84,20 +84,6 @@ public class SimpleTestManager : MonoBehaviour
         start_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss.fff");
     }
 
-    System.Random rng = new System.Random();
-
-    void FisherYatesShuffle(GameObject[] array)
-    {
-        for (int i = array.Length - 1; i > 0; i--)
-        {
-            int j = rng.Next(i + 1);
-
-            GameObject temp = array[i];
-            array[i] = array[j];
-            array[j] = temp;
-        }
-    }
-
 // TODO: the object doesn't return to the original place -> change control scene with less objects
 // TODO: check out-of reach grasping with long distance 
     void Start()
@@ -529,15 +515,6 @@ public class SimpleTestManager : MonoBehaviour
         };
 
         GraspingLogInfo.Add(string.Join(",", data));
-        
-        // string LogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{SessionType}.csv";
-
-        // using (StreamWriter writer = new StreamWriter(LogPath, true))
-        // {
-        //     writer.WriteLine(string.Join(",", data));
-        // }
-
-        
 
         TrialIndex++;
         if (TrialIndex >= Objects.Length)
