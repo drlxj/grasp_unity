@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Session : MonoBehaviour
 {
-    private static Dictionary<char, ExpConfig> expConfigs = new();
+    public static Dictionary<char, ExpConfig> expConfigs = new();
     private static Dictionary<int, List<char>> BLSMatrix = new();
     /*
      * Experiment Configuration Set here.
@@ -20,15 +20,10 @@ public class Session : MonoBehaviour
      */
     private void OnEnable()
     {
-        expConfigs.Add('A', new ExpConfig(0f, false, 0.15f)); // origin, no occlusion, 0.15m angular distance
-        expConfigs.Add('B', new ExpConfig(0f, false, 0.4f));
-        expConfigs.Add('C', new ExpConfig(1f, false, 0.15f)); // ours, no occlusion, 0.15m angular distance
-        expConfigs.Add('D', new ExpConfig(1f, false, 0.4f));
-        expConfigs.Add('E', new ExpConfig(0f, true, 0.15f));
-        expConfigs.Add('F', new ExpConfig(0f, true, 0.4f));
-        expConfigs.Add('G', new ExpConfig(1f, true, 0.15f));
-        expConfigs.Add('H', new ExpConfig(1f, true, 0.4f));
-        expConfigs.Add('I', new ExpConfig(0.5f, false, 0.15f)); // combi, no occlusion, 0.15m angular distance
+        expConfigs.Add('B', new ExpConfig(0f, false, 0.4f)); // pure pointing, head-hand
+        expConfigs.Add('G', new ExpConfig(1f, true, 0.15f)); // pure gesture
+        expConfigs.Add('I', new ExpConfig(0.5f, false, 0.15f)); // combi, pointing head-hand + gesture
+        expConfigs.Add('O', new ExpConfig(0f, true, 0.15f)); // pure pointing, native method
     }
 
     private void Start()
