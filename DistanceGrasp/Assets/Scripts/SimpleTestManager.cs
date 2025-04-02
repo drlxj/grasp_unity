@@ -24,6 +24,7 @@ public class SimpleTestManager : MonoBehaviour
     private List<Slider> posProgressBars = new List<Slider>();
     private List<Slider> gesProgressBars = new List<Slider>();
     public Material originalMaterial;
+    public int timeLimit = 7;
 
     [HideInInspector]
     public DistanceHandGrabInteractable Target;
@@ -53,6 +54,7 @@ public class SimpleTestManager : MonoBehaviour
     private string TargetObjectName;
     private string start_timestamp;
     private System.DateTime GraspingStartTime;
+    private System.DateTime GraspingLimitedTime;
     private System.DateTime GraspingEndTime;
     private List<string> ObjectLogObjectInfo = new List<string>();
     private Dictionary<char, List<string>> GraspingLogInfo = new Dictionary<char, List<string>>();
@@ -183,6 +185,25 @@ public class SimpleTestManager : MonoBehaviour
     {
         tryCollectObjectLog();
         CreateOrUpdateProgressBar();
+        checkGraspingTimeLimit();
+    }
+
+    private void checkGraspingTimeLimit()
+    {
+        TimeSpan remainingTime = GraspingLimitedTime - DateTime.Now;
+
+        if (remainingTime.TotalSeconds <= 0)
+        {
+            // Time is up, handle the timeout case here
+            // 9: Timeout
+            LogGesture(9);
+            interactor.LastObject = interactor.TargetObject;
+            CorrectGrasp();
+            ReHighlight();
+            return;
+        }
+
+        CounterText.text = $"Time Left: {remainingTime.Seconds}s";
     }
 
     private void LogGesture(int correctGestureFlag)
@@ -286,6 +307,7 @@ public class SimpleTestManager : MonoBehaviour
         TargetObjectName = currentObject.name;
         WrongGraspCount = 0;
         GraspingStartTime = System.DateTime.Now;
+        GraspingLimitedTime = GraspingStartTime.AddSeconds(timeLimit);
 
         DistanceHandGrabInteractable target = currentObject.GetComponentInChildren<DistanceHandGrabInteractable>();
 
@@ -324,7 +346,7 @@ public class SimpleTestManager : MonoBehaviour
         {   
             if (SessionTypeIndex >= SessionTypeCount)
             {   
-                // If all sessions are finished, save the logs to CSV files
+                // If all sessions are finished, save the logs to CSV files and quit the application
                 writeObjectLog();
                 writeRotationSeqLog();
                 writeGestureLog();
@@ -332,8 +354,9 @@ public class SimpleTestManager : MonoBehaviour
                 Quit();
             }
             else
-            {
-                // If all trials are finished, move to the next session type
+            {   
+                // If all trials are finished, count down and move to the next session type
+                // CountDown();
                 Start();
             }
             
@@ -493,7 +516,8 @@ public class SimpleTestManager : MonoBehaviour
                 }
             }
         }
-        else {
+        else 
+        {
             int index = 0;
 
             foreach (var scoreEntry in interactor.candidateScores.Skip(1))
