@@ -54,13 +54,9 @@ public class SimpleTestManager : MonoBehaviour
     private string start_timestamp;
     private System.DateTime GraspingStartTime;
     private System.DateTime GraspingEndTime;
-    private List<string> gestureLogFlags = new List<string>();
-    private List<string> gestureLogTargetNames = new List<string>();
-    private List<string> gestureLogAllScores = new List<string>();
-    private List<string> gestureLogHandJoints = new List<string>();
     private List<string> ObjectLogObjectInfo = new List<string>();
-    private List<string> GraspingLogInfo = new List<string>();
-    private List<string> AllGestureAndScoresInfo = new List<string>();
+    private Dictionary<char, List<string>> GraspingLogInfo = new Dictionary<char, List<string>>();
+    private Dictionary<char, List<string>> gestureLogAllScores = new Dictionary<char, List<string>>();
     private bool ObjectLogHasCollected = false;
     public AudioSource audioSource;
 
@@ -92,6 +88,16 @@ public class SimpleTestManager : MonoBehaviour
         SessionTypeIndex++;
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
         PlayerPrefs.Save();
+
+        if (!GraspingLogInfo.ContainsKey(SessionType))
+        {
+            GraspingLogInfo[SessionType] = new List<string>();
+        }
+
+        if (!gestureLogAllScores.ContainsKey(SessionType))
+        {
+            gestureLogAllScores[SessionType] = new List<string>();
+        }
         
         Objects = this.GetComponent<TrackData>().Objects;
 
@@ -232,7 +238,7 @@ public class SimpleTestManager : MonoBehaviour
         }
         string allScores = string.Join("/", scoreList);
         string combinedInfo = $"{flag},{TargetObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints},{allScores}";
-        gestureLogAllScores.Add(combinedInfo);
+        gestureLogAllScores[SessionType].Add(combinedInfo);
 
 
     }
@@ -318,7 +324,7 @@ public class SimpleTestManager : MonoBehaviour
             GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
         };
 
-        GraspingLogInfo.Add(string.Join(",", data));
+        GraspingLogInfo[SessionType].Add(string.Join(",", data));
 
         TrialIndex++;
         if (TrialIndex >= Objects.Length)
@@ -361,27 +367,33 @@ public class SimpleTestManager : MonoBehaviour
     }
 
     private void writeGestureLog()
-    {
-        string GestureLogPath = $"../DistanceGrasp/Assets/LogData/GestureData_{start_timestamp}_{SessionType}.csv";
-        using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
+    {   
+        foreach (var entry in gestureLogAllScores)
         {
-            foreach (var line in gestureLogAllScores)
+            string GestureLogPath = $"../DistanceGrasp/Assets/LogData/GestureData_{start_timestamp}_{entry.Key}.csv";
+            using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
             {
-                writer.WriteLine(line); 
+                foreach (var line in entry.Value)
+                {
+                    writer.WriteLine(line); 
+                }
             }
         }
     }
 
     private void  WriteGraspingLog()
     {
-        string GraspingLogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{SessionType}.csv";
-        using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
+        foreach (var entry in GraspingLogInfo)
         {
-            foreach (var line in GraspingLogInfo)
+            string GraspingLogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{entry.Key}.csv";
+            using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
             {
-                writer.WriteLine(line); 
+                foreach (var line in entry.Value)
+                {
+                    writer.WriteLine(line); 
+                }
             }
-        }  
+        }
     }
 
     private void CreateOrUpdateProgressBar()
