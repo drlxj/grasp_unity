@@ -4,6 +4,7 @@ using Oculus.Interaction.HandGrab;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using System.Linq;
@@ -61,6 +62,7 @@ public class SimpleTestManager : MonoBehaviour
     private Dictionary<char, List<string>> gestureLogAllScores = new Dictionary<char, List<string>>();
     private bool ObjectLogHasCollected = false;
     public AudioSource audioSource;
+    private bool isCountingDown = false;
 
     private void Awake()
     {
@@ -72,13 +74,24 @@ public class SimpleTestManager : MonoBehaviour
         interactor.OnSelectFalse += HandleSelectFalse;
         interactor.OnSelectEnd += HandleSelectEnd;
         interactor.OnSelectInterrupt += HandleSelectInterrupt;
+
+        CounterText = CounterUI.GetComponentInChildren<TextMeshProUGUI>();
+
+        ScoreText = ScoreUI.GetComponentInChildren<TextMeshProUGUI>();
+
+        posScoreText = PosScoreUI.GetComponentInChildren<TextMeshProUGUI>();
+
+        gesScoreText = GesScoreUI.GetComponentInChildren<TextMeshProUGUI>();
     }
 
 // TODO: the object doesn't return to the original place -> change control scene with less objects
 // TODO: check out-of reach grasping with long distance 
-    void Start()
+    private IEnumerator Start()
     {   
         SessionType = SessionTypes[SessionTypeIndex];
+        
+        yield return StartCoroutine(CountDown());
+
         SessionTypeIndex++;
         
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
@@ -102,14 +115,6 @@ public class SimpleTestManager : MonoBehaviour
 
             initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
         }
-
-        CounterText = CounterUI.GetComponentInChildren<TextMeshProUGUI>();
-
-        ScoreText = ScoreUI.GetComponentInChildren<TextMeshProUGUI>();
-
-        posScoreText = PosScoreUI.GetComponentInChildren<TextMeshProUGUI>();
-
-        gesScoreText = GesScoreUI.GetComponentInChildren<TextMeshProUGUI>();
 
         SetConfig();
 
@@ -182,7 +187,11 @@ public class SimpleTestManager : MonoBehaviour
     }
 
     void Update()
-    {
+    {   
+        if (isCountingDown)
+        {
+            return;
+        }
         tryCollectObjectLog();
         CreateOrUpdateProgressBar();
         checkGraspingTimeLimit();
@@ -211,6 +220,7 @@ public class SimpleTestManager : MonoBehaviour
         // correctGestureFlag: 
         // 1: correct grasp
         // 0: wrong grasp
+        // 9: timeout
         string flag = correctGestureFlag.ToString();
 
         TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
@@ -262,7 +272,6 @@ public class SimpleTestManager : MonoBehaviour
         LogGesture(1);
         // correctGestureFlag: 
         // 1: correct grasp
-        // 0: wrong grasp
         CorrectGrasp();
     }
 
@@ -270,7 +279,6 @@ public class SimpleTestManager : MonoBehaviour
     {   
         LogGesture(0);
         // correctGestureFlag: 
-        // 1: correct grasp
         // 0: wrong grasp
         WrongGrasp();
     }
@@ -354,10 +362,10 @@ public class SimpleTestManager : MonoBehaviour
                 Quit();
             }
             else
-            {   
+            {
                 // If all trials are finished, count down and move to the next session type
-                // CountDown();
-                Start();
+                StartCoroutine(Start());
+                return;
             }
             
         }
@@ -424,6 +432,30 @@ public class SimpleTestManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    private IEnumerator CountDown()
+    {   
+        isCountingDown = true; 
+        // char nextSessionType = SessionTypes[SessionTypeIndex];
+        interactor.enabled = false;
+
+        for (int i = 6; i > 0; i--)
+        {
+            CounterText.text = $"Next Session: {SessionType}\nStarting in {i}...";
+            CounterText.color = Color.yellow; 
+            yield return new WaitForSeconds(1);
+        }
+
+        CounterText.text = "Go!";
+        CounterText.color = Color.red;
+        yield return new WaitForSeconds(1); 
+
+        CounterText.text = "";
+
+        interactor.enabled = true;
+        CounterText.color = Color.white;
+        isCountingDown = false;
     }
 
     private void CreateOrUpdateProgressBar()
