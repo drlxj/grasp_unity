@@ -54,22 +54,22 @@ class ObjectDataset(object):
 
   def preprocessing(self):
     ds = {}
-    # obj_fpaths = glob.glob("files/object_meshes_hog/*.obj")  
-    obj_fpaths = glob.glob("files/object_meshes/*.obj")  
+    # obj_fpaths = glob.glob("files/object_meshes_hog/*.ply")  
+    obj_fpaths = glob.glob("files/object_meshes/*.ply")  
 
     for obj_fpath in obj_fpaths:
         base_name = os.path.basename(obj_fpath)
-        obj_name = base_name[3:-4]
+        obj_name = base_name[:-4] #hog: [3:-4]
         obj_name = obj_name.replace("_","")
         # ply_fpath = os.path.join("files/object_meshes_hog", obj_name + ".ply")
         ply_fpath = os.path.join("files/object_meshes", obj_name + ".ply")
 
-        # Convert OBJ to PLY if not already converted
-        if not os.path.exists(ply_fpath):
-            mesh = trimesh.load_mesh(obj_fpath)
-            mesh.export(ply_fpath)  # Save as PLY
+        # # Convert OBJ to PLY if not already converted
+        # if not os.path.exists(ply_fpath):
+        #     mesh = trimesh.load_mesh(obj_fpath)
+        #     mesh.export(ply_fpath)  # Save as PLY
         
-                # Load mesh from PLY
+        # Load mesh from PLY
         mesh = trimesh.load_mesh(ply_fpath)
 
         # Sample 1024 points from the mesh surface
