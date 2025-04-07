@@ -355,6 +355,9 @@ public class SimpleTestManager : MonoBehaviour
             if (SessionTypeIndex >= SessionTypeCount)
             {   
                 // If all sessions are finished, save the logs to CSV files and quit the application
+                createFolderIfNotExists($"../DistanceGrasp/Assets/LogData/{start_timestamp}/");
+                createFolderIfNotExists($"../DistanceGrasp/Assets/LogData/{start_timestamp}/meta_data/");
+                createSessionTypeFolderIfNotExists(SessionTypes);
                 writeObjectLog();
                 writeRotationSeqLog();
                 writeGestureLog();
@@ -378,9 +381,29 @@ public class SimpleTestManager : MonoBehaviour
         WrongGraspCount++;
     }
 
+    private void createFolderIfNotExists(string folderPath)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath);
+        }
+    }
+
+    private void createSessionTypeFolderIfNotExists(string sessionType)
+    {
+        for (int i = 0; i < SessionTypeCount; i++)
+        {
+            string sessionTypeFolderPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{sessionType[i]}/";
+            if (!Directory.Exists(sessionTypeFolderPath))
+            {
+                Directory.CreateDirectory(sessionTypeFolderPath);
+            }
+        }
+    }
+
     private void writeObjectLog()
     {
-        string objectInfoLogPath = $"../DistanceGrasp/Assets/LogData/ObjectData_{start_timestamp}.csv";
+        string objectInfoLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/meta_data/ObjectData.csv";
         using (StreamWriter writer = new StreamWriter(objectInfoLogPath, true))
         {
             foreach (var line in ObjectLogObjectInfo)
@@ -394,7 +417,7 @@ public class SimpleTestManager : MonoBehaviour
         List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
 
         RotationSeqNameObjectList = this.GetComponent<ObjectTransformAssignment>().RotationSeqNameObjectList;
-        string RotationSeqLogPath = $"../DistanceGrasp/Assets/LogData/RotationSeqData_{start_timestamp}.csv";
+        string RotationSeqLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/meta_data/RotationSeqData.csv";
         using (StreamWriter writer = new StreamWriter(RotationSeqLogPath, true))
         {
             foreach (var line in RotationSeqNameObjectList)
@@ -408,7 +431,7 @@ public class SimpleTestManager : MonoBehaviour
     {   
         foreach (var entry in gestureLogAllScores)
         {
-            string GestureLogPath = $"../DistanceGrasp/Assets/LogData/GestureData_{start_timestamp}_{entry.Key}.csv";
+            string GestureLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{entry.Key}/GestureData.csv";
             using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
             {
                 foreach (var line in entry.Value)
@@ -423,7 +446,7 @@ public class SimpleTestManager : MonoBehaviour
     {
         foreach (var entry in GraspingLogInfo)
         {
-            string GraspingLogPath = $"../DistanceGrasp/Assets/LogData/GraspingData_{start_timestamp}_{entry.Key}.csv";
+            string GraspingLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{entry.Key}/GraspingData.csv";
             using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
             {
                 foreach (var line in entry.Value)
