@@ -1,8 +1,9 @@
 import os
 import csv
 from datetime import datetime
+import numpy as np
 
-INPUT_EXPERIMENT_TIMESTAMP = "20250407_164224.809"
+INPUT_EXPERIMENT_TIMESTAMP = "20250407_170650.731"
 ROOT_DIR = f"../DistanceGrasp/Assets/LogData/{INPUT_EXPERIMENT_TIMESTAMP}"
 OUTPUT_PATH = f"{ROOT_DIR}/processed_data"
 FILE_NAME = "processed_data.csv"
@@ -86,7 +87,7 @@ def calculate_catch_duration_and_accuracy(session_type):
             end_time = datetime.strptime(row[3], "%Y-%m-%d %H:%M:%S.%f")
 
             # Calculate accuracy
-            accuracy = 1 / (wrong_attempt + 1)
+            accuracy = round(1 / (wrong_attempt + 1), 2)
 
             # Calculate duration in seconds
             duration = (end_time - start_time).total_seconds()
@@ -120,7 +121,54 @@ def write_data_to_file(results, output_filename, index):
     with open(output_filename, "w") as f:
         f.writelines(lines)
 
+def calculate_mean_and_variance(output_filename):
+    with open(output_filename, "r") as f:
+        csv_reader = csv.reader(f)
+        headers = next(csv_reader)  # Skip the header
+        data = list(csv_reader)
 
+    # Transpose the data to process columns
+    columns = list(zip(*data))
+
+    # Initialize results dictionary
+    stats = {"mean": [], "variance": []}
+
+    # Iterate over columns starting from the second (skip objName)
+    for i, header in enumerate(headers[1:], start=1):
+        try:
+            # Convert column values to floats, ignoring empty strings
+            values = [float(value) for value in columns[i] if value.strip()]
+            mean = round(np.mean(values), 2)
+            variance = round(np.var(values, ddof=0), 2)  # Population variance
+            stats["mean"].append(mean)
+            stats["variance"].append(variance)
+        except ValueError:
+            # Skip columns that cannot be converted to floats
+            stats["mean"].append("")
+            stats["variance"].append("")
+
+    return stats
+
+def append_stats_to_file(output_filename, stats):
+    with open(output_filename, "r") as f:
+        lines = f.readlines()
+
+    # Prepare mean and variance rows
+    mean_row = ["MEAN"] + stats["mean"]  # Add "MEAN" as the first cell
+    var_row = ["VAR"] + stats["variance"]  # Add "VAR" as the first cell
+
+    # Convert rows to CSV format
+    mean_line = ",".join(map(str, mean_row)) + "\n"
+    var_line = ",".join(map(str, var_row)) + "\n"
+
+    # Insert mean and variance rows at the beginning
+    lines.insert(1, mean_line)  # Insert mean row after the header
+    lines.insert(2, var_line)  # Insert variance row after the mean row
+
+    # Write back to the file
+    with open(output_filename, "w") as f:
+        f.writelines(lines)
+    
 def main():
     exist_session_types = collection_types()
     exist_session_types = sort_exist_session_types_according_to_valid_types(exist_session_types)
@@ -135,6 +183,13 @@ def main():
         result = calculate_catch_duration_and_accuracy(session_type)
         write_data_to_file(result, output_filename, index)
         index += 1
+    
+    # calculate mean and variance for each column
+    stats = calculate_mean_and_variance(output_filename)
+
+    # write the stats to the file
+    append_stats_to_file(output_filename, stats)
+
 
 
 if __name__ == "__main__":
