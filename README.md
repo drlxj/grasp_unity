@@ -28,24 +28,6 @@ Before you begin, ensure you have the following installed on your system:
       ```bash
       pip install -r requirements.txt
       ```
-
-4. **Set Up Meta Quest 2**:
-    - Use a USB cable to connect your Meta Quest 2 headset to your computer.
-
-4. **Install Anaconda3**:
-    - Download and install [Anaconda3](https://www.anaconda.com/) if it is not already installed on your system.
-
-3. **Prepare Anaconda3 Environment**:
-    - Install [Anaconda3] if not already installed.
-    - Create a new environment for the project:
-      ```bash
-      conda env create -f environment.yml
-      ```
-    - Activate the environment:
-      ```bash
-      conda activate grab
-      ```
-
 ## Project Structure
 
 This project is organized into three main components:
@@ -84,10 +66,6 @@ Follow these steps to run the project:
 
 1. **Run the Python Model**:
     - Navigate to the `model` folder.
-    - Activate the Anaconda environment:
-      ```bash
-      conda activate grab
-      ```
     - Locate the `app.py` file and run it.
 
 2. **Open the Unity Project**:
