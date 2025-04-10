@@ -133,7 +133,7 @@ public class MiniDataCollectionManager : MonoBehaviour
 
     private void writeObjectLog()
     {
-        string objectInfoLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/meta_data/ObjectData.csv";
+        string objectInfoLogPath = $"../DistanceGrasp/Assets/LogData/{TargetObjName}/{start_timestamp}/meta_data/ObjectData.csv";
         using (StreamWriter writer = new StreamWriter(objectInfoLogPath, true))
         {
             foreach (var line in ObjectLogObjectInfo)
@@ -142,12 +142,13 @@ public class MiniDataCollectionManager : MonoBehaviour
             }
         }
     }
+
     private void writeRotationSeqLog()
     {
         List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
 
         RotationSeqNameObjectList = this.GetComponent<ObjectTransformAssignment>().RotationSeqNameObjectList;
-        string RotationSeqLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/meta_data/RotationSeqData.csv";
+        string RotationSeqLogPath = $"../DistanceGrasp/Assets/LogData/{TargetObjName}/{start_timestamp}/meta_data/RotationSeqData.csv";
         using (StreamWriter writer = new StreamWriter(RotationSeqLogPath, true))
         {
             foreach (var line in RotationSeqNameObjectList)
@@ -157,20 +158,17 @@ public class MiniDataCollectionManager : MonoBehaviour
         }
     }
 
-    //private void writeGestureLog()
-    //{   
-    //    foreach (var entry in gestureLogAllScores)
-    //    {
-    //        string GestureLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{entry.Key}/GestureData.csv";
-    //        using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
-    //        {
-    //            foreach (var line in entry.Value)
-    //            {
-    //                writer.WriteLine(line); 
-    //            }
-    //        }
-    //    }
-    //}
+    private void writeGestureLog()
+    {   
+        string GestureLogPath = $"../DistanceGrasp/Assets/LogData/{TargetObjName}/{start_timestamp}/GestureData.csv";
+        using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
+        {
+            foreach (var entry in gestureLogAllScores)
+            {
+                writer.WriteLine(entry); 
+            }
+        }
+    }
 
     private void LogGesture(int correctGestureFlag)
     {   
