@@ -136,7 +136,7 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
             ObjectTransformData object_transform_set = transformData[object_name];
 
             // int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);
-            int randomIndex = 0;
+            int randomIndex = 1;
             // if (object_name == "waterbottle")
             //     randomIndex = 290;
 
