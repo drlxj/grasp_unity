@@ -17,6 +17,7 @@ public class MiniDataCollectionManager : MonoBehaviour
     [HideInInspector]
     public GameObject[] Objects;
     public DistanceHandGrabInteractor interactor;
+    public DistanceHandGrabInteractable Target;
     public Material glowMaterial;
     public GameObject progressBarPrefab;
     public GameObject posProgressBarPrefab;
@@ -47,14 +48,20 @@ public class MiniDataCollectionManager : MonoBehaviour
     private System.DateTime GraspingLimitedTime;
     private System.DateTime GraspingEndTime;
     private List<string> ObjectLogObjectInfo = new List<string>();
-    private Dictionary<char, List<string>> GraspingLogInfo = new Dictionary<char, List<string>>();
-    private Dictionary<char, List<string>> gestureLogAllScores = new Dictionary<char, List<string>>();
+    private List<string> gestureLogAllScores = new List<string>();
     private bool ObjectLogHasCollected = false;
     public AudioSource audioSource;
     private bool isCountingDown = false;
+    public OVRHand leftHand;
+    private bool indexFingerIsPinching = false;
+    private bool midFingerIsPinching = false;
+
+    private string TargetObjName;
 
     private void Awake()
-    {   
+    {
+        
+
         char SessionType = SessionTypes[0];
 
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
@@ -78,6 +85,7 @@ public class MiniDataCollectionManager : MonoBehaviour
     private void Start()
     {        
         Objects = this.GetComponent<MiniDataCollectionTrackData>().Objects;
+        TargetObjName = this.GetComponent<MiniDataCollectionTrackData>().TargetObjName;
 
         foreach (var obj in Objects)
         {
@@ -87,11 +95,40 @@ public class MiniDataCollectionManager : MonoBehaviour
         }
 
         TrialIndex = 0;
+
+        GameObject currentObject = Objects[TrialIndex];
+        DistanceHandGrabInteractable target = currentObject.GetComponentInChildren<DistanceHandGrabInteractable>();
+        target.ObjID = 0;
+        interactor.TargetObject = target.GetGameObject();
+        interactor.Target = target;
+        interactor.ResetPerformance();
     }
 
     void Update()
-    {   
+    {
         CreateOrUpdateProgressBar();
+
+        if (IsLeftHandIndexPinch() && !indexFingerIsPinching)
+        {
+            indexFingerIsPinching = true;
+            LogGesture(1);
+            MoveObject(TrialIndex);
+        }
+        else if (!IsLeftHandIndexPinch())
+        {
+            indexFingerIsPinching = false;
+        }
+
+        if (IsLeftHandMidPinch() && !midFingerIsPinching)
+        {
+            midFingerIsPinching = true;
+            LogGesture(0);
+            MoveObject(TrialIndex);
+        }
+        else if (!IsLeftHandMidPinch())
+        {
+            midFingerIsPinching = false;
+        }
     }
 
     private void writeObjectLog()
@@ -120,34 +157,68 @@ public class MiniDataCollectionManager : MonoBehaviour
         }
     }
 
-    private void writeGestureLog()
-    {   
-        foreach (var entry in gestureLogAllScores)
-        {
-            string GestureLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{entry.Key}/GestureData.csv";
-            using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
-            {
-                foreach (var line in entry.Value)
-                {
-                    writer.WriteLine(line); 
-                }
-            }
-        }
-    }
+    //private void writeGestureLog()
+    //{   
+    //    foreach (var entry in gestureLogAllScores)
+    //    {
+    //        string GestureLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{entry.Key}/GestureData.csv";
+    //        using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
+    //        {
+    //            foreach (var line in entry.Value)
+    //            {
+    //                writer.WriteLine(line); 
+    //            }
+    //        }
+    //    }
+    //}
 
-    private void  WriteGraspingLog()
-    {
-        foreach (var entry in GraspingLogInfo)
+    private void LogGesture(int correctGestureFlag)
+    {   
+        // correctGestureFlag: 
+        // 1: cannot grasp
+        // 0: can grasp
+        string flag = correctGestureFlag.ToString();
+
+        TelemetryMessage currentMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
+
+        Quaternion rootRotation = currentMessage.rootRotation;
+        Vector3 rootPosition = currentMessage.rootPosition;
+        Vector3[] jointPositions = currentMessage.jointPositions;
+  
+        List<string> jointStrings = new List<string>();
+
+        string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
+        string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+
+        foreach (var joint in jointPositions)
         {
-            string GraspingLogPath = $"../DistanceGrasp/Assets/LogData/{start_timestamp}/{entry.Key}/GraspingData.csv";
-            using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
+            string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
+            jointStrings.Add(jointInfo);
+        }
+
+        string allJoints = string.Join("/", jointStrings);
+
+        List<string> scoreList = new List<string>();
+
+        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
+        {
+            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+
+            if (parts.Length >= 5)
             {
-                foreach (var line in entry.Value)
-                {
-                    writer.WriteLine(line); 
-                }
+                string name = parts[0];
+                float gestureScoreCandidateScores = float.Parse(parts[1]);
+                float posScoreCandidateScores = float.Parse(parts[2]);
+                float gestureWeightCandidateScores = float.Parse(parts[3]);
+                float finalScoreCandidateScores = float.Parse(parts[4]);
+                string scoreEntryString = $"{name}|{gestureScoreCandidateScores}|{posScoreCandidateScores}|{gestureWeightCandidateScores}|{finalScoreCandidateScores}";
+                scoreList.Add(scoreEntryString);
             }
         }
+        string allScores = string.Join("/", scoreList);
+        string combinedInfo = $"{flag},{TargetObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints},{allScores}";
+        gestureLogAllScores.Add(combinedInfo);
     }
 
     private void CreateOrUpdateProgressBar()
@@ -293,6 +364,40 @@ public class MiniDataCollectionManager : MonoBehaviour
                 }
             }
 
+        }
+    }
+
+    private bool IsLeftHandIndexPinch()
+    {
+        return leftHand.GetFingerIsPinching(OVRHand.HandFinger.Index);
+    }
+
+    private bool IsLeftHandMidPinch()
+    {
+        return leftHand.GetFingerIsPinching(OVRHand.HandFinger.Middle);
+    }
+
+    private void MoveObject(int TrialIndex)
+    {
+        TrialIndex++;
+        foreach (var obj in initialTransforms.Keys)
+        {
+            if (obj.name == TargetObjName)
+            {
+                obj.transform.position = new Vector3(
+                    initialTransforms[obj].position.x,
+                    initialTransforms[obj].position.y - 0.5f,
+                    initialTransforms[obj].position.z
+                );
+                obj.transform.rotation = initialTransforms[obj].rotation;
+            } else {
+                obj.transform.position = new Vector3(
+                    initialTransforms[obj].position.x - 1.0f * (TrialIndex),
+                    initialTransforms[obj].position.y,
+                    initialTransforms[obj].position.z
+                );
+                obj.transform.rotation = initialTransforms[obj].rotation;
+            }
         }
     }
 
