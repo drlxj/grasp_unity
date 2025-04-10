@@ -32,14 +32,6 @@ public class MiniDataCollectionDataGenerator : MonoBehaviour
         //ObjectDisplayed = this.GetComponent<ControlTaskManager>().ObjectDisplayed;
         //ObjectDisplayed = 25;
         MatrixSize = (int)Math.Sqrt(ObjectDisplayed);;
-
-        CSVFileName = FileName + ".csv";
-        FilePath = Path.Combine(FolderPath, CSVFileName);
-        if (!File.Exists(FilePath)|| !GenerateFile)
-        {
-            Debug.LogError($"The file at path {FilePath} does not exist.");
-            return;
-        }
     }
 
     // Start is called before the first frame update

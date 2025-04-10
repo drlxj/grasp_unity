@@ -8,7 +8,20 @@ import os
 import glob
 import csv
 
+
 obj_dataset = ObjectDataset()
+
+from bps_torch.bps import bps_torch
+from pathlib import Path
+
+dtype_mapping = {
+    "torch.float32": torch.float32, # float
+    "torch.float64": torch.float64, # double
+    "torch.float16": torch.float16,
+    "torch.int32": torch.int32,
+    "torch.int64": torch.int64,
+}
+
 
 session_name = "20250331_151156.961_I"
 
@@ -174,3 +187,5 @@ for row in success_grasping_rows:
                  seq=seq_name, 
                  target_obj_scores=scores_dic.get(target_obj_name), 
                  obj_scores=scores_dic.get(obj_types[0]))
+
+
