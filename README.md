@@ -79,18 +79,15 @@ Follow these steps to run the project:
     - Interact with the VR environment to perform the experiment.
 
 4. **Perform Data Analysis**:
-    - Navigate to the `DistanceGrasp` folder, then go to the `LogData` folder.
-    - Locate the folder named with the experiment's start timestamp (e.g., `20250407_170650.731`). This folder contains the raw data for the experiment.
-    - Copy the name of this folder.
-    - Navigate to the `data_process` folder and open the `data_process.py` file.
-    - Modify line 6 of the code:
-      ```python
-        INPUT_EXPERIMENT_TIMESTAMP = "your_experiment_timestamp"
-      ```
-      Replace `"your_experiment_timestamp"` with the name of the folder you copied earlier.
-    - Run the [data_process.py](http://_vscodecontentref_/0) script.
-    - After the script finishes, go back to the `LogData` folder and open the experiment's timestamp folder.
-    - Inside the `processed_data` folder, you will find a CSV file containing the analysis results for the experiment.
+  - Navigate to the `DistanceGrasp` folder, then go to the `LogData` folder.
+  - Locate the folder named with the experiment's start timestamp (e.g., `20250407_170650.731`). This folder contains the raw data for the experiment.
+  - Copy the name of this folder.
+  - Run the [data_process.py](http://_vscodecontentref_/0) script by giving the name of the folder, for example:
+      ```bash  
+    python data_process.py 20250407_170650.731
+    ```
+  - After the script finishes, go back to the `LogData` folder and open the experiment's timestamp folder.
+  - Inside the `20250407_170650.731` folder, you will find a CSV file containing the analysis results for the experiment inside `processed_data` folder.
 
 ## Modify Experiment Configuration
 
