@@ -85,7 +85,7 @@ Follow these steps to run the project:
     - Navigate to the `data_process` folder and open the `data_process.py` file.
     - Modify line 6 of the code:
       ```python
-      INPUT_EXPERIMENT_TIMESTAMP = "your_experiment_timestamp"
+        INPUT_EXPERIMENT_TIMESTAMP = "your_experiment_timestamp"
       ```
       Replace `"your_experiment_timestamp"` with the name of the folder you copied earlier.
     - Run the [data_process.py](http://_vscodecontentref_/0) script.

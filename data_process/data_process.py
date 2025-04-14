@@ -2,8 +2,13 @@ import os
 import csv
 from datetime import datetime
 import numpy as np
+import sys
 
-INPUT_EXPERIMENT_TIMESTAMP = "20250411_155520.997"
+if len(sys.argv) < 2:
+    print("Error: Please provide the experiment timestamp as an argument.")
+    sys.exit(1)
+
+INPUT_EXPERIMENT_TIMESTAMP = sys.argv[1]
 ROOT_DIR = f"../DistanceGrasp/Assets/LogData/{INPUT_EXPERIMENT_TIMESTAMP}"
 OUTPUT_PATH = f"{ROOT_DIR}/processed_data"
 FILE_NAME = "processed_data.csv"
