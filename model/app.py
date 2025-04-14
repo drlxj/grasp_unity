@@ -22,7 +22,8 @@ sock = UdpComms(ip="127.0.0.1", out_queue=data_queue,
 # model = InferenceNet(config=model_config)
 # model.load()
 model = InferenceNet(**model_config).to('cpu')
-ckpt = torch.load(r'./files/0013_acc_pos_org_aug_aug.tar', map_location=torch.device('cpu'))  # Force loading on CPU
+ckpt = torch.load(r'./files/0015_acc_vr_only.tar', map_location=torch.device('cpu'))  # Force loading on CPU
+# ckpt = torch.load(r'./files/0012_acc_pos.tar', map_location=torch.device('cpu'))
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()
 
@@ -123,7 +124,8 @@ while True:
     # obj_probs, obj_transls = model(inputs)
     prediction = model(obj_bps=obj_bps, hand_joints=hand_joint_position_obs)
     obj_probs = prediction["obj_logit"]
-    obj_transls = prediction["obj_translation"]
+    # obj_transls = prediction["obj_translation"]
+    obj_transls = torch.ones((obj_probs.size(0), 3)) 
     # probs: (n_objcts, 1)
     # transls: (n_objcts, 3)
     # obj_transls = torch.einsum("ij,nj->ni", yz_swap_matrix, obj_transls)

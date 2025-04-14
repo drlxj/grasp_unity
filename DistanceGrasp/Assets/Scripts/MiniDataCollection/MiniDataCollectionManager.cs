@@ -48,6 +48,8 @@ public class MiniDataCollectionManager : MonoBehaviour
     public OVRHand leftHand;
     private bool indexFingerIsPinching = false;
     private bool midFingerIsPinching = false;
+    private bool ringFingerIsPinching = false;
+
 
     private string TargetObjectName;
 
@@ -117,6 +119,17 @@ public class MiniDataCollectionManager : MonoBehaviour
         {
             midFingerIsPinching = false;
         }
+
+        if (IsLeftHandRingPinch() && !ringFingerIsPinching)
+        {
+            ringFingerIsPinching = true;
+            LogGesture(2);
+            MoveObject();
+        }
+        else if (!IsLeftHandRingPinch())
+        {
+            ringFingerIsPinching = false;
+        }
     }
 
     private void writeObjectLog()
@@ -180,6 +193,7 @@ public class MiniDataCollectionManager : MonoBehaviour
         // correctGestureFlag: 
         // 1: cannot grasp
         // 0: can grasp
+        // 2: not sure
         string flag = correctGestureFlag.ToString();
 
         TelemetryMessage currentMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
@@ -217,6 +231,12 @@ public class MiniDataCollectionManager : MonoBehaviour
         return leftHand.GetFingerIsPinching(OVRHand.HandFinger.Middle);
     }
 
+    private bool IsLeftHandRingPinch()
+    {
+        return leftHand.GetFingerIsPinching(OVRHand.HandFinger.Ring);
+    }
+
+
     private void MoveObject()
     {
         TrialIndex++;
@@ -250,7 +270,7 @@ public class MiniDataCollectionManager : MonoBehaviour
         {
             try
             {
-                TelemetryMessage firstMessage = this.GetComponent<TrackData>().currentMessage;
+                TelemetryMessage firstMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
                 // Debug.Log("objectStates length: " + currentMessage.objectStates.Length);
                 for (int i = 0; i < firstMessage.objectStates.Length; i++)
                 {

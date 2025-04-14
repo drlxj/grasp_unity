@@ -74,9 +74,12 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
 {
     private GameObject[] objects;
     public string fileName; //"rotation_candidates_check_all";
+
     private Dictionary<string, ObjectTransformData> transformData;
 
     public List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
+
+    public int randomIndex = 1;
     
     // Start is called before the first frame update
     void Start()
@@ -136,7 +139,7 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
             ObjectTransformData object_transform_set = transformData[object_name];
 
             // int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);
-            int randomIndex = 1;
+            
             // if (object_name == "waterbottle")
             //     randomIndex = 290;
 

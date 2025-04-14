@@ -3271,7 +3271,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Objects: []
-  interactor: {fileID: 1717875438}
   glowMaterial: {fileID: 2100000, guid: b45f48c8c4a26df40ae0683c37b4843c, type: 2}
   progressBarPrefab: {fileID: 1503794477145344827, guid: 2036f2efccb0fa44c858a2ba5fd04d8a, type: 3}
   posProgressBarPrefab: {fileID: 1503794477145344827, guid: 26724888c34553a42864aa58193d6afd, type: 3}
@@ -3279,16 +3278,8 @@ MonoBehaviour:
   originalMaterial: {fileID: -3033667219593020291, guid: ea7d81045c087de4d93e51c3d0aa1b2c, type: 3}
   SessionTypes: G
   CounterUI: {fileID: 1335248084}
-  ScoreUI: {fileID: 1580700207}
-  PosScoreUI: {fileID: 527177707}
-  GesScoreUI: {fileID: 380406679}
-  ScoreText: {fileID: 0}
-  posScoreText: {fileID: 0}
-  gesScoreText: {fileID: 0}
-  TargetObjectName: 
   audioSource: {fileID: 1281254550}
   leftHand: {fileID: 741868994}
-  TargetObjName: 
 --- !u!114 &1281254552
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3306,7 +3297,7 @@ MonoBehaviour:
   Objects: []
   Prefabs: []
   PrefabFolderName: Prefab_datacollection
-  TargetObjName: teapot
+  TargetObjName: waterbottle
   objNames: []
   allObjects: []
 --- !u!114 &1281254553
@@ -3322,6 +3313,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fileName: rotation_candidates
+  randomIndex: 13
 --- !u!114 &1281254554
 MonoBehaviour:
   m_ObjectHideFlags: 0

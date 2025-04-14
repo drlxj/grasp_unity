@@ -2,18 +2,20 @@ import numpy as np
 import trimesh
 
 
-data = np.load("./session_npz_files/20250331_151156.961_I/bowl/bowl.npz")
+data = np.load(r"C:\Users\Researcher\grasping-unity\model\session_npz_files\s1\teapot_1\t_0\features_counter_mug.npz")
 
 
-obj_vertices = data["obj_vertices"]
-hand_vertices = data["hand_vertices"]
-seq = data["seq"]
-target_obj_scores = data["target_obj_scores"]
-obj_scores = data["obj_scores"]
 
-print(seq)
-print(target_obj_scores)
-print(obj_scores)
+
+obj_vertices = data["pcl"]
+hand_vertices = data["subject_joints_pos_rel2wrist"]
+# seq = data["seq"]
+# target_obj_scores = data["target_obj_scores"]
+# obj_scores = data["obj_scores"]
+
+# print(seq)
+# print(target_obj_scores)
+# print(obj_scores)
 
 obj_colors = np.tile([255, 0, 0, 255], (obj_vertices.shape[0], 1))   # 红色
 

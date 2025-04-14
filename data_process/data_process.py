@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 import numpy as np
 
-INPUT_EXPERIMENT_TIMESTAMP = "20250407_170650.731"
+INPUT_EXPERIMENT_TIMESTAMP = "20250411_155520.997"
 ROOT_DIR = f"../DistanceGrasp/Assets/LogData/{INPUT_EXPERIMENT_TIMESTAMP}"
 OUTPUT_PATH = f"{ROOT_DIR}/processed_data"
 FILE_NAME = "processed_data.csv"

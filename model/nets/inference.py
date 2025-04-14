@@ -47,7 +47,7 @@ class InferenceNet(nn.Module):
             nn.ReLU(),
         )
         self.decoder_logit = nn.Sequential(nn.Linear(64, 1), nn.Sigmoid())
-        self.decoder_position = nn.Linear(64, 3)
+        # self.decoder_position = nn.Linear(64, 3)
         self.compute_total_params()
     
     def compute_total_params(self, str="inference_net"):
@@ -73,9 +73,9 @@ class InferenceNet(nn.Module):
        
         enc = self.model(x)
         logit = self.decoder_logit(enc)
-        position = self.decoder_position(enc)
+        # position = self.decoder_position(enc)
  
-        predictions = {"obj_logit": logit, "obj_translation": position}
+        predictions = {"obj_logit": logit, "obj_translation": None}
         return predictions
     
     def load(self, ckpt_path):
