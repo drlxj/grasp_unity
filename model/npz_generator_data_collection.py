@@ -17,7 +17,7 @@ LogDataDir = r"../DistanceGrasp/Assets/LogData/"
 target_obj_name_list = ["apple","banana","binoculars","bowl","cup","hammer","knife",
                         "mouse","mug","spheremedium","teapot","toothpaste","torusmedium","watch",
                         "waterbottle","wineglass"]
-test_user_id = "s8"
+test_user_id = "s12"
 timestamp = "t_0"
 for target_obj_name in target_obj_name_list:
     session_name_dirs = [

@@ -54,7 +54,12 @@ public enum ObjectType
      CYLINDERMEDIUM = 49,
      HEADPHONES = 50,
      SPHERESMALL = 51,
-     WINEGLASS = 52
+     WINEGLASS = 52,
+     PLATE = 53,
+     DISKLID = 54,
+     CRACKERBOX = 55,
+     POTTEDMEATCAN = 56
+
 //    NONE = 0,
 //    CRACKERBOX = 1,
 //    POTTEDMEATCAN = 2,

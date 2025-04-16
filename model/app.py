@@ -22,7 +22,7 @@ sock = UdpComms(ip="127.0.0.1", out_queue=data_queue,
 # model = InferenceNet(config=model_config)
 # model.load()
 model = InferenceNet(**model_config).to('cpu')
-ckpt = torch.load(r'./files/0014_acc_vr_data_5.tar', map_location=torch.device('cpu'))  # Force loading on CPU
+ckpt = torch.load(r'./files/0015_acc_vr_allx5.tar', map_location=torch.device('cpu'))  # Force loading on CPU
 # ckpt = torch.load(r'./files/0012_acc_pos.tar', map_location=torch.device('cpu'))
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()

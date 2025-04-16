@@ -35,22 +35,61 @@ public class MiniDataCollectionTrackData : MonoBehaviour
 
     private void Awake()
     {
+        // Prefabs = Resources.LoadAll<GameObject>(PrefabFolderName);
+
+        // objectCount = Prefabs.Length;
+
+        // Objects = new GameObject[objectCount];
+        // objNames = new string[objectCount];
+
+        // // Add the TargetObjName object first if it exists
+        // List<GameObject> sortedPrefabs = new List<GameObject>();
+        // foreach (var prefab in Prefabs)
+        // {
+        //     if (prefab.name == TargetObjName)
+        //     {
+        //         sortedPrefabs.Add(prefab);
+        //         break;
+        //     }
+        // }
+
+        // // Add the rest of the objects, excluding the TargetObjName object
+        // foreach (var prefab in Prefabs)
+        // {
+        //     if (prefab.name != TargetObjName)
+        //     {
+        //         sortedPrefabs.Add(prefab);
+        //     }
+        // }
+
+        // // Update Prefabs with the sorted list
+        // Prefabs = sortedPrefabs.ToArray();
+
+        // Vector3 startPosition = new Vector3(0, 0, 2); // Starting position for the first object
+        // for (int i = 0; i < Prefabs.Length; i++)
+        // {
+        //     GameObject instance = Instantiate(Prefabs[i]);
+        //     instance.transform.position = new Vector3(startPosition.x + i, startPosition.y, startPosition.z);
+        //     instance.name = Prefabs[i].name;
+
+        //     Objects[i] = instance;
+        //     objNames[i] = instance.name;
+        // }
+
+        // Load all prefabs from the specified folder
         Prefabs = Resources.LoadAll<GameObject>(PrefabFolderName);
 
-        objectCount = Prefabs.Length;
+        // Shuffle the Prefabs array
+        Prefabs = Prefabs.OrderBy(_ => UnityEngine.Random.value).ToArray();
 
-        Objects = new GameObject[objectCount];
-        objNames = new string[objectCount];
+        // Create a list to store sorted prefabs
+        List<GameObject> sortedPrefabs = new List<GameObject>();
 
         // Add the TargetObjName object first if it exists
-        List<GameObject> sortedPrefabs = new List<GameObject>();
-        foreach (var prefab in Prefabs)
+        GameObject targetPrefab = Prefabs.FirstOrDefault(prefab => prefab.name == TargetObjName);
+        if (targetPrefab != null)
         {
-            if (prefab.name == TargetObjName)
-            {
-                sortedPrefabs.Add(prefab);
-                break;
-            }
+            sortedPrefabs.Add(targetPrefab);
         }
 
         // Add the rest of the objects, excluding the TargetObjName object
@@ -62,8 +101,18 @@ public class MiniDataCollectionTrackData : MonoBehaviour
             }
         }
 
+        // Limit the number of prefabs to 16
+        sortedPrefabs = sortedPrefabs.Take(16).ToList();
+
         // Update Prefabs with the sorted list
         Prefabs = sortedPrefabs.ToArray();
+
+        objectCount = Prefabs.Length;
+
+        Debug.Log($"Object Count: {objectCount}");
+
+        Objects = new GameObject[objectCount];
+        objNames = new string[objectCount];
 
         Vector3 startPosition = new Vector3(0, 0, 2); // Starting position for the first object
         for (int i = 0; i < Prefabs.Length; i++)

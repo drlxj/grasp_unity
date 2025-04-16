@@ -57,6 +57,11 @@ class ObjectType(Enum):
     SPHERE_MEDIUM = 47
     SPHERE_SMALL = 51
     SPHERE_LARGE = 43
+    PLATE = 53
+    DISKLID = 54
+    CRACKERBOX = 55
+    POTTEDMEATCAN = 56
+
     # NONE = 0
     # CRACKERBOX = 1
     # POTTEDMEATCAN = 2
