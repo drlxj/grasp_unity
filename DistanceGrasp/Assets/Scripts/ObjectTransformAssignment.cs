@@ -135,8 +135,8 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             ObjectTransformData object_transform_set = transformData[object_name];
 
-            // int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);
-            int randomIndex = 1;
+            int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);
+            // int randomIndex = 3;
             // if (object_name == "waterbottle")
             //     randomIndex = 290;
 

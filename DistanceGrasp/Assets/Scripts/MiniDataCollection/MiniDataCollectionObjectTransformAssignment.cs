@@ -142,9 +142,12 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
             
             // if (object_name == "waterbottle")
             //     randomIndex = 290;
+            if (i != 0)
+            {
+                randomIndex = UnityEngine.Random.Range(30, object_transform_set.seq_name.Count);
+            }
 
             List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
-
 
             //Create a Matrix4x4 and populate its rotation component
             Matrix4x4 matrix_python = new Matrix4x4();

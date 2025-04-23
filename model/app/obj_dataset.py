@@ -15,7 +15,7 @@ class ObjectDataset(object):
       "files",
     )
     
-    # self.ds_path = os.path.join(self.file_path, f"obj_hog.npz")
+    # self.ds_path_hog = os.path.join(self.file_path, f"obj_hog.npz")
     self.ds_path = os.path.join(self.file_path, f"obj.npz")
     self.load_or_create_datset()
     self.bps_basis = self.ds["bps_basis"][::4]

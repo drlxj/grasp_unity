@@ -2,7 +2,7 @@ import numpy as np
 import trimesh
 
 
-data = np.load(r"C:\Users\Researcher\grasping-unity\model\session_npz_files\s1\teapot_1\t_0\features_counter_mug.npz")
+data = np.load(r"C:\Users\Researcher\grasping-unity\model\session_npz_files\s13\crackerbox_8\t_0\features.npz")
 
 
 

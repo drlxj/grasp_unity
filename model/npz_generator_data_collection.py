@@ -14,11 +14,16 @@ import re
 obj_dataset = ObjectDataset()
 
 LogDataDir = r"../DistanceGrasp/Assets/LogData/"
-target_obj_name_list = ["apple","banana","binoculars","bowl","cup","hammer","knife",
-                        "mouse","mug","spheremedium","teapot","toothpaste","torusmedium","watch",
-                        "waterbottle","wineglass"]
-test_user_id = "s12"
+# target_obj_name_list = ["apple","banana","binoculars","bowl","cup","hammer","knife",
+#                         "mouse","mug","spheremedium","teapot","toothpaste","torusmedium","watch",
+#                         "waterbottle","wineglass", "crackerbox", "disklid", "pottedmeatcan", "plate"]
+# target_obj_name_list = ["crackerbox", "disklid", "pottedmeatcan", "plate"]
+target_obj_name_list = ["plate"]
 timestamp = "t_0"
+
+test_user_id = "s22"
+grasping_position = torch.tensor([0.0, 0.0, 0.5])
+
 for target_obj_name in target_obj_name_list:
     session_name_dirs = [
         file for file in glob.glob(os.path.join(LogDataDir, target_obj_name, "*"))
@@ -121,6 +126,7 @@ for target_obj_name in target_obj_name_list:
         bps_basis = torch.from_numpy(np.load(bps_fname)['basis']).to(torch.float32)
         bps = bps_torch(bps_type="custom", custom_basis=bps_basis)
 
+        os.makedirs(os.path.join(session_npz_files_dir, test_user_id), exist_ok=True)
         test_user_id_folders = [
             folder for folder in os.listdir(os.path.join(session_npz_files_dir, test_user_id))
             if os.path.isdir(os.path.join(session_npz_files_dir, test_user_id, folder))
@@ -170,8 +176,6 @@ for target_obj_name in target_obj_name_list:
 
             # Create a point cloud for the hand
             hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
-
-            
             
             # get object from object_info_dict
             object_rotation_value = object_info_dict.get(object_name)  # Get the enum value from the dictionary
@@ -226,7 +230,24 @@ for target_obj_name in target_obj_name_list:
 
             not_sure_path = os.path.join(session_npz_files_dir, "not_sure")
             os.makedirs(not_sure_path, exist_ok=True)
+
             if flag == "1":
+                wrist_pos = row[5].split("|")
+                wrist_pos = torch.tensor([float(x) for x in wrist_pos])
+                obj_translation = grasping_position - wrist_pos  # Wrist position data
+                obj_translation = torch.Tensor(obj_translation).unsqueeze(0)
+                obj_translation = torch.einsum("ij,nj->ni", R_unity2python, obj_translation)
+                obj_translation = torch.einsum("ij,nj->ni", R_camera, obj_translation)
+
+                # obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
+                # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0] + obj_translation, colors=obj_pcl_colors)
+
+                # # Create a scene with the object and hand point clouds
+                # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
+
+                # scene.show()
+
+
                 save_path = os.path.join(new_folder_path, f"features.npz")
                 np.savez(
                     save_path,

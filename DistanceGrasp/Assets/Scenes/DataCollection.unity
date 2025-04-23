@@ -3297,7 +3297,7 @@ MonoBehaviour:
   Objects: []
   Prefabs: []
   PrefabFolderName: Prefab_datacollection
-  TargetObjName: wineglass
+  TargetObjName: plate
   objNames: []
   allObjects: []
 --- !u!114 &1281254553
@@ -3312,8 +3312,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 502f539851a45e04dad882a8cb177326, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fileName: rotation_candidates
-  randomIndex: 29
+  fileName: rotation_candidates_mini
+  randomIndex: 9
 --- !u!114 &1281254554
 MonoBehaviour:
   m_ObjectHideFlags: 0

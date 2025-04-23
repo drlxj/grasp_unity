@@ -49,6 +49,7 @@ public class MiniDataCollectionManager : MonoBehaviour
     private bool indexFingerIsPinching = false;
     private bool midFingerIsPinching = false;
     private bool ringFingerIsPinching = false;
+    private bool isGrasping = false;
 
 
     private string TargetObjectName;
@@ -101,35 +102,45 @@ public class MiniDataCollectionManager : MonoBehaviour
         if (IsLeftHandIndexPinch() && !indexFingerIsPinching)
         {
             indexFingerIsPinching = true;
-            LogGesture(1);
-            MoveObject();
+            if (isGrasping == false)
+            {
+                LogGesture(1);
+                MoveObjectToGraspingPosition();
+                isGrasping = true;
+            } else {
+                AppendWristPos();
+                MoveObject();
+            }
         }
         else if (!IsLeftHandIndexPinch())
         {  
             indexFingerIsPinching = false;
         }
 
-        if (IsLeftHandMidPinch() && !midFingerIsPinching)
-        {
-            midFingerIsPinching = true;
-            LogGesture(0);
-            MoveObject();
-        }
-        else if (!IsLeftHandMidPinch())
-        {
-            midFingerIsPinching = false;
-        }
+        if (isGrasping == false){
+            if (IsLeftHandMidPinch() && !midFingerIsPinching)
+            {
+                midFingerIsPinching = true;
+                LogGesture(0);
+                MoveObject();
+            }
+            else if (!IsLeftHandMidPinch())
+            {
+                midFingerIsPinching = false;
+            }
 
-        if (IsLeftHandRingPinch() && !ringFingerIsPinching)
-        {
-            ringFingerIsPinching = true;
-            LogGesture(2);
-            MoveObject();
+            if (IsLeftHandRingPinch() && !ringFingerIsPinching)
+            {
+                ringFingerIsPinching = true;
+                LogGesture(2);
+                MoveObject();
+            }
+            else if (!IsLeftHandRingPinch())
+            {
+                ringFingerIsPinching = false;
+            }
         }
-        else if (!IsLeftHandRingPinch())
-        {
-            ringFingerIsPinching = false;
-        }
+        
     }
 
     private void writeObjectLog()
@@ -191,8 +202,8 @@ public class MiniDataCollectionManager : MonoBehaviour
     private void LogGesture(int correctGestureFlag)
     {   
         // correctGestureFlag: 
-        // 1: cannot grasp
-        // 0: can grasp
+        // 1: can grasp
+        // 0: cannot grasp
         // 2: not sure
         string flag = correctGestureFlag.ToString();
 
@@ -258,6 +269,31 @@ public class MiniDataCollectionManager : MonoBehaviour
                     initialTransforms[obj].position.x - 1.0f * (TrialIndex),
                     initialTransforms[obj].position.y,
                     initialTransforms[obj].position.z
+                );
+                obj.transform.rotation = initialTransforms[obj].rotation;
+            }
+        }
+    }
+
+    private void AppendWristPos()
+    {   
+        TelemetryMessage currentMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
+        Vector3 rootPosition = currentMessage.rootPosition;
+        string wristPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+        gestureLogAllScores[gestureLogAllScores.Count - 1] += $",{wristPositionInfo}";
+        isGrasping = false;
+    }
+
+    private void MoveObjectToGraspingPosition()
+    {
+        foreach (var obj in initialTransforms.Keys)
+        {
+            if (obj.name == Objects[TrialIndex].name)
+            {
+                obj.transform.position = new Vector3(
+                    0.0f,
+                    0.0f,
+                    0.5f
                 );
                 obj.transform.rotation = initialTransforms[obj].rotation;
             }
