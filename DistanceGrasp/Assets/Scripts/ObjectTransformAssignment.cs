@@ -157,9 +157,11 @@ public class ObjectTransformAssignment : MonoBehaviour
 
             Matrix4x4 matrix_unity = T_camera* T_unity2python * matrix_python * T_unity2python;
 
-            Quaternion rotation_unity = matrix_unity.rotation;
+            // Quaternion rotation_unity = matrix_unity.rotation;
+            Quaternion rotation_unity = new Quaternion(0f, 0.7071068f, 0.7071068f, 0f);
 
             current_object.transform.rotation = rotation_unity;
+            
             // Extract rotation as Quaternion and translation as Vector3
             // Quaternion rotation_unity = Quaternion.Euler(
             //                                 Mathf.Rad2Deg * -20.875f, 

@@ -4,24 +4,22 @@ using Meta.WitAi.Json;
 using UnityEngine;
 using System;
 
-// public class ObjectTransformData
-// {
-//     public List<string> seq_name { get; set; }
-//     public List<List<List<float>>> object_rotation { get; set; }
+public class QuatsObjectTransformData
+{
+    public List<List<float>> object_rotation { get; set; }
 
-//     public override string ToString()
-//     {
-//         string seqNames = string.Join(", ", seq_name);
-//         string rotations = "";
+    // public override string ToString()
+    // {
+    //     string rotations = "";
 
-//         for (int i = 0; i < object_rotation.Count; i++)
-//         {
-//             rotations += $"Rotation {i}: {string.Join(", ", object_rotation[i])}\n";
-//         }
+    //     for (int i = 0; i < object_rotation.Count; i++)
+    //     {
+    //         rotations += $"Rotation {i}: {string.Join(", ", object_rotation[i])}\n";
+    //     }
 
-//         return $"seq_name: [{seqNames}], \nobject_rotation: \n{rotations}";
-//     }
-// }
+    //     return $"seq_name: [{seqNames}], \nobject_rotation: \n{rotations}";
+    // }
+}
 
 public class MiniDataCollectionObjectTransformData
 {
@@ -75,7 +73,7 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
     private GameObject[] objects;
     public string fileName; //"rotation_candidates_check_all";
 
-    private Dictionary<string, ObjectTransformData> transformData;
+    private Dictionary<string, QuatsObjectTransformData> transformData;
 
     public List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
 
@@ -102,7 +100,7 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
         TextAsset jsonFile = Resources.Load<TextAsset>(fileName);
         string jsonContent = jsonFile.text;
         
-        transformData = JsonConvert.DeserializeObject<Dictionary<string, ObjectTransformData>>(jsonContent);
+        transformData = JsonConvert.DeserializeObject<Dictionary<string, QuatsObjectTransformData>>(jsonContent);
 
         // Debug.Log("Loaded transform candidates");
        
@@ -136,35 +134,57 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
 
             Debug.Log($"object_name: {object_name}");
 
-            ObjectTransformData object_transform_set = transformData[object_name];
+            QuatsObjectTransformData object_transform_set = transformData[object_name];
 
             // int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);
             
             // if (object_name == "waterbottle")
             //     randomIndex = 290;
+
+            Quaternion rotation_unity;
             if (i != 0)
             {
-                randomIndex = UnityEngine.Random.Range(30, object_transform_set.seq_name.Count);
+                // randomIndex = UnityEngine.Random.Range(0, object_transform_set.object_rotation.Count);
+                rotation_unity = new Quaternion(0f, 0f, 0f, 0f);
+            } 
+            else {
+                List<float> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
+                rotation_unity = new Quaternion(
+                                                object_rotation_matrix[0], 
+                                                object_rotation_matrix[1], 
+                                                object_rotation_matrix[2],
+                                                object_rotation_matrix[3]
+                                            );
             }
 
-            List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
+            // List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 
-            //Create a Matrix4x4 and populate its rotation component
-            Matrix4x4 matrix_python = new Matrix4x4();
-            matrix_python.SetRow(0, new Vector4(object_rotation_matrix[0][0], object_rotation_matrix[0][1], object_rotation_matrix[0][2], 0));
-            matrix_python.SetRow(1, new Vector4(object_rotation_matrix[1][0], object_rotation_matrix[1][1], object_rotation_matrix[1][2], 0));
-            matrix_python.SetRow(2, new Vector4(object_rotation_matrix[2][0], object_rotation_matrix[2][1], object_rotation_matrix[2][2], 0));
-            matrix_python.SetRow(3, new Vector4(0, 0, 0, 1));  // Set the last row for a valid transformation matrix
+            // List<List<float>> object_rotation_matrix = new List<List<float>>()
+            // {
+            //     new List<float> { 0.6646f,  0.7281f,  0.1677f },
+            //     new List<float> { -0.3030f,  0.0574f,  0.9513f },
+            //     new List<float> {  0.6830f, -0.6830f,  0.2588f }
+            // };
+
+            // //Create a Matrix4x4 and populate its rotation component
+            // Matrix4x4 matrix_python = new Matrix4x4();
+            // matrix_python.SetRow(0, new Vector4(object_rotation_matrix[0][0], object_rotation_matrix[0][1], object_rotation_matrix[0][2], 0));
+            // matrix_python.SetRow(1, new Vector4(object_rotation_matrix[1][0], object_rotation_matrix[1][1], object_rotation_matrix[1][2], 0));
+            // matrix_python.SetRow(2, new Vector4(object_rotation_matrix[2][0], object_rotation_matrix[2][1], object_rotation_matrix[2][2], 0));
+            // matrix_python.SetRow(3, new Vector4(0, 0, 0, 1));  // Set the last row for a valid transformation matrix
             // Debug.Log("-------");
             // Debug.Log(matrix_python.GetRow(0));
             // Debug.Log(matrix_python.GetRow(1));
             // Debug.Log(matrix_python.GetRow(2));
             // Debug.Log(matrix_python.GetRow(3));
 
-            Matrix4x4 matrix_unity = T_camera* T_unity2python * matrix_python * T_unity2python;
+            // Matrix4x4 matrix_unity = T_camera* T_unity2python * matrix_python * T_unity2python;
+            // Matrix4x4 matrix_unity =  T_unity2python * matrix_python * T_unity2python;
 
-            Quaternion rotation_unity = matrix_unity.rotation;
-
+            // Quaternion rotation_unity = matrix_unity.rotation;
+            // Debug.Log($"rotation_unity: ({rotation_unity[0]}, {rotation_unity[1]}, {rotation_unity[2]}, {rotation_unity[3]})");
+            // Quaternion rotation_unity = new Quaternion(0f, 0.7071068f, 0.7071068f, 0f);
+            // rotation_unity.x = matrix_unity[0, 0];
             current_object.transform.rotation = rotation_unity;
             // Extract rotation as Quaternion and translation as Vector3
             // Quaternion rotation_unity = Quaternion.Euler(
@@ -176,21 +196,21 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
 //            current_object.transform.rotation = new Vector3(-20.875f, -85.646f, -114.245f); //rotation_unity;
 //            current_object.transform.eulerAngles = new Vector3(-20.875f, -85.646f, -114.245f);
 
-            Matrix4x4 rotationMatrix = Matrix4x4.Rotate(current_object.transform.rotation);
-            string matrixString = "";
-            for (int id = 0; id < 3; id++)
-            {
-               matrixString += matrix_python[id, 0].ToString("F3") + " " +
-                               matrix_python[id, 1].ToString("F3") + " " +
-                               matrix_python[id, 2].ToString("F3") + "\n";
-            }
-            Debug.Log("Rotation Matrix:\n" + matrixString);
+            // Matrix4x4 rotationMatrix = Matrix4x4.Rotate(current_object.transform.rotation);
+            // string matrixString = "";
+            // for (int id = 0; id < 3; id++)
+            // {
+            //    matrixString += matrix_python[id, 0].ToString("F3") + " " +
+            //                    matrix_python[id, 1].ToString("F3") + " " +
+            //                    matrix_python[id, 2].ToString("F3") + "\n";
+            // }
+            // Debug.Log("Rotation Matrix:\n" + matrixString);
             // current_object.transform.eulerAngles = new Vector3(-84.0f, -0.3f, -117.03f);
             // Debug.Log($"object_quaternion: ({current_object.transform.rotation.w}, {current_object.transform.rotation.x}, {current_object.transform.rotation.y}, {current_object.transform.rotation.z})");
             // current_object.transform.position = object_translation;
-            Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} index {randomIndex} with matrix"  + string.Join(", ", object_rotation_matrix));
+            // Debug.Log($"Assigned {object_name} from {object_transform_set.seq_name[randomIndex]} index {randomIndex} with matrix"  + string.Join(", ", object_rotation_matrix));
 
-            RotationSeqNameObjectList.Add(new Tuple<string, string>(object_name, object_transform_set.seq_name[randomIndex]));
+            // RotationSeqNameObjectList.Add(new Tuple<string, string>(object_name, object_transform_set.seq_name[randomIndex]));
 
             // === HAND JOINTS VISUALIZATION ===
             // List<float> object_translation_list = object_transform_set.object_translation[randomIndex];

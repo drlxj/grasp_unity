@@ -63,11 +63,12 @@ R_camera = torch.Tensor(
 T_quat_unity2python = torch.eye(4)
 T_quat_unity2python[1:, 1:] = -R_unity2python
 
-obj_quats_unity =  # (n_objects, 4) TODO: reading from a directory
+obj_quats_unity =  torch.tensor([0, 0.7071068, 0.7071068 , 0])# (n_objects, 4) TODO: reading from a directory
 obj_quats_python = torch.einsum("ij,nj->ni", T_quat_unity2python, obj_quats_unity)
 
 obj_rot_matrices = quaternion_to_matrix(obj_quats_python) # (n_objects, 3, 3)
 obj_rot_matrices = torch.einsum("ik,nkj->nij", R_camera, obj_rot_matrices)
+
 
 
 # TODO: create json file that contains for each object what are the rotation matrix candidates in python coordinates

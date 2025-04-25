@@ -3124,7 +3124,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   Prefabs: []
-  PrefabFolderName: pure_hog_dataset
+  PrefabFolderName: prefab_mug
   objNames: []
   allObjects: []
   densityFactor: 1
@@ -3206,7 +3206,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfb5b5ff1e10c354282be0a8573dfb9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fileName: rotation_candidates_mini
+  fileName: rotation_candidates
 --- !u!114 &1281254549
 MonoBehaviour:
   m_ObjectHideFlags: 0

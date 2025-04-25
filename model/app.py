@@ -44,13 +44,13 @@ R_unity2python = torch.Tensor(
         [0.0, 0.0, 1.0,],
     ]
 )
-R_camera = torch.Tensor(
-    [
-        [0.0, 0.0, 1.0],
-        [-1.0, 0.0, 0.0],
-        [0.0, -1.0, 0.0],
-    ]
-)
+# R_camera = torch.Tensor(
+#     [
+#         [0.0, 0.0, 1.0],
+#         [-1.0, 0.0, 0.0],
+#         [0.0, -1.0, 0.0],
+#     ]
+# )
 T_quat_unity2python = torch.eye(4)
 T_quat_unity2python[1:, 1:] = -R_unity2python
 
@@ -73,7 +73,7 @@ while True:
         obj_quats_python = torch.einsum("ij,nj->ni", T_quat_unity2python, obj_quats_unity)
 
         obj_rot_matrices = quaternion_to_matrix(obj_quats_python) # (n_objects, 3, 3)
-        obj_rot_matrices = torch.einsum("ik,nkj->nij", R_camera, obj_rot_matrices)
+        # obj_rot_matrices = torch.einsum("ik,nkj->nij", R_camera, obj_rot_matrices)
         # print("obj_quats_python:", obj_rot_matrices)
         obj_positions = telemetry_packet.object_positions
 
@@ -85,11 +85,13 @@ while True:
 
     # print("Object Positions:")
     # print(obj_positions)
+    print("obj_rot_matrices:")
+    print(obj_rot_matrices)
 
     # hand pose
     hand_joint_position_unity = torch.Tensor(telemetry_packet.hand_joint_position) # (n_joints, 3)
     hand_joint_position_python = torch.einsum("ij,nj->ni", R_unity2python, hand_joint_position_unity)
-    hand_joint_position_python = torch.einsum("ij,nj->ni", R_camera, hand_joint_position_python)
+    # hand_joint_position_python = torch.einsum("ij,nj->ni", R_camera, hand_joint_position_python)
 
     hand_joint_position_obs = hand_joint_position_python.reshape((-1,)).expand((obj_bps.size(0), -1)) # (n_objects, n_joints * 3)
 
@@ -102,19 +104,21 @@ while True:
     obj_transl =  torch.einsum("ij,nj->ni", R_unity2python, torch.tensor(obj_positions)) # (n_obj, 3)
     obj_pcl_global = (obj_pcl + obj_transl.unsqueeze(1)).detach()
     # # obj_dataset.visualize_obj(obj_names=obj_types, obj_pcls=obj_pcl_global, hand_joints=global_hand_joint_position_python) #
-    # import trimesh
-    # obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
-    # hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
+    import trimesh
+    obj_color = np.array([255, 0, 0, 255])  # Red with full opacity
+    hand_color = np.array([0, 0, 255, 255])  # Blue with full opacity
     
-    # obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
-    # hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
+    obj_pcl_colors = np.tile(obj_color, (obj_pcl[0].shape[0], 1))
+    hand_pcl_colors = np.tile(hand_color, (hand_joint_position_python.shape[0], 1))
     
-    # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
-    # # # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0]+obj_transl[0], colors=obj_pcl_colors)
-    # hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
-    
-    # scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
-    # scene.show()
+    obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0], colors=obj_pcl_colors)
+    # # obj_pcl_mesh = trimesh.PointCloud(obj_pcl[0]+obj_transl[0], colors=obj_pcl_colors)
+    hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
+
+    axis = trimesh.creation.axis(origin_size=0.02, axis_length=0.1)
+
+    scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh, axis])
+    scene.show()
 
 
     """

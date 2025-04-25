@@ -3296,8 +3296,8 @@ MonoBehaviour:
   ObjectCenter: {fileID: 0}
   Objects: []
   Prefabs: []
-  PrefabFolderName: Prefab_datacollection
-  TargetObjName: plate
+  PrefabFolderName: Prefab_25
+  TargetObjName: apple
   objNames: []
   allObjects: []
 --- !u!114 &1281254553
@@ -3312,8 +3312,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 502f539851a45e04dad882a8cb177326, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fileName: rotation_candidates_mini
-  randomIndex: 9
+  fileName: quaternion_candidates
+  randomIndex: 0
 --- !u!114 &1281254554
 MonoBehaviour:
   m_ObjectHideFlags: 0

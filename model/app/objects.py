@@ -61,7 +61,7 @@ class ObjectType(Enum):
     DISKLID = 54
     CRACKERBOX = 55
     POTTEDMEATCAN = 56
-
+    SMARTPHONE = 57
     # NONE = 0
     # CRACKERBOX = 1
     # POTTEDMEATCAN = 2
