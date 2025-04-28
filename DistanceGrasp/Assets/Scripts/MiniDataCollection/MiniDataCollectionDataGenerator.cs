@@ -69,7 +69,6 @@ public class MiniDataCollectionDataGenerator : MonoBehaviour
     }
 
     private void GenerateTrialsWithTargetAndObjectOrder()
-    
     {
         List<int> mapping = GenerateCentralIndices(MatrixSize);
         Dictionary<int, bool> checkData = new();

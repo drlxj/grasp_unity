@@ -134,6 +134,12 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
 
             Debug.Log($"object_name: {object_name}");
 
+            Debug.Log("Keys in transformData:");
+            foreach (var key in transformData.Keys)
+            {
+                Debug.Log(key);
+            }
+
             QuatsObjectTransformData object_transform_set = transformData[object_name];
 
             // int randomIndex = UnityEngine.Random.Range(0, object_transform_set.seq_name.Count);

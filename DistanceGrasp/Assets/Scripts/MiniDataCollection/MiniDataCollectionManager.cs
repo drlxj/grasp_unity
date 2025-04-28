@@ -93,8 +93,8 @@ public class MiniDataCollectionManager : MonoBehaviour
         if (objectsLength == TrialIndex )
         {
 
-            writeObjectLog();
-            writeRotationSeqLog();
+            // writeObjectLog();
+            // writeRotationSeqLog();
             writeGestureLog();
             Quit();
         }
@@ -183,7 +183,7 @@ public class MiniDataCollectionManager : MonoBehaviour
     private void writeGestureLog()
     {   
 
-        string GestureFolderPath = $"../DistanceGrasp/Assets/LogData/{TargetObjectName}/{start_timestamp}/";
+        string GestureFolderPath = $"../collected_data/{TargetObjectName}/{start_timestamp}/";
         if (!Directory.Exists(GestureFolderPath))
         {
             Directory.CreateDirectory(GestureFolderPath);
