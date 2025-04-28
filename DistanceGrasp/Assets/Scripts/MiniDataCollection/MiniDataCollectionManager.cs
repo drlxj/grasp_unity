@@ -93,7 +93,7 @@ public class MiniDataCollectionManager : MonoBehaviour
         if (objectsLength == TrialIndex )
         {
 
-            // writeObjectLog();
+            writeObjectLog();
             // writeRotationSeqLog();
             writeGestureLog();
             Quit();
@@ -145,7 +145,7 @@ public class MiniDataCollectionManager : MonoBehaviour
 
     private void writeObjectLog()
     {
-        string objectInfoFolderPath = $"../DistanceGrasp/Assets/LogData/{TargetObjectName}/{start_timestamp}/meta_data/";
+        string objectInfoFolderPath = $"../collected_data/{TargetObjectName}/{start_timestamp}/meta_data/";
         if (!Directory.Exists(objectInfoFolderPath))
         {
             Directory.CreateDirectory(objectInfoFolderPath);
@@ -165,7 +165,7 @@ public class MiniDataCollectionManager : MonoBehaviour
         List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
 
         RotationSeqNameObjectList = this.GetComponent<MiniDataCollectionObjectTransformAssignment>().RotationSeqNameObjectList;
-        string RotationSeqFolderPath = $"../DistanceGrasp/Assets/LogData/{TargetObjectName}/{start_timestamp}/meta_data/";
+        string RotationSeqFolderPath = $"../collected_data/{TargetObjectName}/{start_timestamp}/meta_data/";
         if (!Directory.Exists(RotationSeqFolderPath))
         {
             Directory.CreateDirectory(RotationSeqFolderPath);

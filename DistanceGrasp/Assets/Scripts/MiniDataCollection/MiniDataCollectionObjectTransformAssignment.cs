@@ -150,18 +150,16 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
             Quaternion rotation_unity;
             if (i != 0)
             {
-                // randomIndex = UnityEngine.Random.Range(0, object_transform_set.object_rotation.Count);
-                rotation_unity = new Quaternion(0f, 0f, 0f, 0f);
-            } 
-            else {
-                List<float> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
-                rotation_unity = new Quaternion(
-                                                object_rotation_matrix[0], 
-                                                object_rotation_matrix[1], 
-                                                object_rotation_matrix[2],
-                                                object_rotation_matrix[3]
-                                            );
+                randomIndex = UnityEngine.Random.Range(0, object_transform_set.object_rotation.Count);
             }
+
+            List<float> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
+            rotation_unity = new Quaternion(
+                                            object_rotation_matrix[0], 
+                                            object_rotation_matrix[1], 
+                                            object_rotation_matrix[2],
+                                            object_rotation_matrix[3]
+                                        );
 
             // List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
 

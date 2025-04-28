@@ -13,15 +13,18 @@ import re
 
 obj_dataset = ObjectDataset()
 
-LogDataDir = r"../DistanceGrasp/Assets/LogData/"
-# target_obj_name_list = ["apple","banana","binoculars","bowl","cup","hammer","knife",
-#                         "mouse","mug","spheremedium","teapot","toothpaste","torusmedium","watch",
-#                         "waterbottle","wineglass", "crackerbox", "disklid", "pottedmeatcan", "plate"]
+LogDataDir = r"../collected_data/"
+target_obj_name_list = ["apple","banana","binoculars","bowl","camera",
+                        "cup","hammer","knife", "mouse","mug",
+                        "spheremedium","teapot","toothpaste","toruslarge","watch",
+                        "waterbottle","wineglass", "crackerbox", "disklid", "pottedmeatcan", 
+                        "plate","fryingpan","headphones","smartphone","spherelarge",
+                        "spheresmall"]
 # target_obj_name_list = ["crackerbox", "disklid", "pottedmeatcan", "plate"]
-target_obj_name_list = ["plate"]
+# target_obj_name_list = ["plate"]
 timestamp = "t_0"
 
-test_user_id = "s22"
+test_user_id = "s28"
 grasping_position = torch.tensor([0.0, 0.0, 0.5])
 
 for target_obj_name in target_obj_name_list:
@@ -56,7 +59,7 @@ for target_obj_name in target_obj_name_list:
         ]
 
         object_info_file = [file for file in meta_files_root_dir if os.path.basename(file) == "ObjectInfoData.csv"]
-        rotation_seq_file = [file for file in meta_files_root_dir if os.path.basename(file) == "RotationSeqData.csv"]
+        # rotation_seq_file = [file for file in meta_files_root_dir if os.path.basename(file) == "RotationSeqData.csv"]
 
         # print(f"Object info file: {object_info_file}")
 
@@ -72,13 +75,13 @@ for target_obj_name in target_obj_name_list:
 
         # print(f"Object info dict: {object_info_dict}")
 
-        seq_dict = {}
-        with open(rotation_seq_file[0], mode='r', encoding='utf-8') as file:
-            csv_reader = csv.reader(file)
-            for row in csv_reader:
-                if len(row) == 2:  # Ensure the row has exactly two elements
-                    key, value = row
-                    seq_dict[key] = value  # Store the key-value pair in the dictionary
+        # seq_dict = {}
+        # with open(rotation_seq_file[0], mode='r', encoding='utf-8') as file:
+        #     csv_reader = csv.reader(file)
+        #     for row in csv_reader:
+        #         if len(row) == 2:  # Ensure the row has exactly two elements
+        #             key, value = row
+        #             seq_dict[key] = value  # Store the key-value pair in the dictionary
 
 
 
