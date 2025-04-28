@@ -214,7 +214,7 @@ namespace Oculus.Interaction.HandGrab
             this.IsGestureProbability = false;
             this._distantCandidateComputer.DebugSwitch = DebugSwitch;
             this.RightObject = false;
-            InitialLogFile(out csvFilePath);
+            // InitialLogFile(out csvFilePath);
             // TargetObject.GetComponentInChildren<MeshRenderer>().material.SetFloat("_Highlighted", 1);
         }
 
