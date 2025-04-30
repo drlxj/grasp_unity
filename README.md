@@ -84,7 +84,7 @@ Follow these steps to run the project:
   - Copy the name of this folder.
   - Run the [data_process.py](http://_vscodecontentref_/0) script by giving the name of the folder, for example:
       ```bash  
-    python data_process.py 20250407_170650.731
+    python data_process_new.py 20250407_170650.731
     ```
   - After the script finishes, go back to the `LogData` folder and open the experiment's timestamp folder.
   - Inside the `20250407_170650.731` folder, you will find a CSV file containing the analysis results for the experiment inside `processed_data` folder.

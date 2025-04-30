@@ -3297,8 +3297,8 @@ MonoBehaviour:
   ObjectCenter: {fileID: 0}
   Objects: []
   Prefabs: []
-  PrefabFolderName: test_prefab
-  TargetObjName: stanfordbunny
+  PrefabFolderName: Prefab_25_1
+  TargetObjName: apple
   objNames: []
   allObjects: []
 --- !u!114 &1281254553
