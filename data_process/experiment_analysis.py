@@ -151,7 +151,7 @@ def append_stats_to_file(output_filename, stats):
 def main():
     args = parse_arguments()
 
-    root_dir = f"../DistanceGrasp/Assets/LogData/{args.experiment_timestamp}"
+    root_dir = f"../user_study_data/{args.experiment_timestamp}"
     output_path = f"{root_dir}/processed_data"
     output_filename = create_output_directory_and_file(output_path)
 

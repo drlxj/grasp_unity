@@ -3296,8 +3296,8 @@ MonoBehaviour:
   ObjectCenter: {fileID: 0}
   Objects: []
   Prefabs: []
-  PrefabFolderName: Prefab_25_1
-  TargetObjName: bowl
+  PrefabFolderName: test_prefab
+  TargetObjName: stanfordbunny
   objNames: []
   allObjects: []
 --- !u!114 &1281254553
@@ -3312,8 +3312,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 502f539851a45e04dad882a8cb177326, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fileName: quaternion_candidates_test
-  randomIndex: 2
+  fileName: quaternion_candidates_20250429_171643
+  randomIndex: 1
 --- !u!114 &1281254554
 MonoBehaviour:
   m_ObjectHideFlags: 0

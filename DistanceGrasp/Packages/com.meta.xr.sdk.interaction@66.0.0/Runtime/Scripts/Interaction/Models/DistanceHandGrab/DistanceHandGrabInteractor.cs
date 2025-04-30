@@ -341,7 +341,7 @@ namespace Oculus.Interaction.HandGrab
                     AttemptCount++;
                     LastObject = TargetObject;
                     Debug.Log($"Log: {CatchTime}s used for catching {interactable.GetObjName()}, total attempt: {AttemptCount}.");
-                    AppendInfo(interactable, CatchTime, AttemptCount);
+                    // AppendInfo(interactable, CatchTime, AttemptCount);
                     // Need to Reset
                     OnSelectTrue?.Invoke(this, EventArgs.Empty);
                 } 

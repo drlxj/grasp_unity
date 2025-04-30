@@ -353,7 +353,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e44a571664101e24d954e31306976d51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  PrefabFolderName: Prefab_25_1
+  PrefabFolderName: test_prefab
   Y_Angles: 000000005a000000b40000000e010000
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

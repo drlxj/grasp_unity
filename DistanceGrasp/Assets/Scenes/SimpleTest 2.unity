@@ -3124,7 +3124,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   Prefabs: []
-  PrefabFolderName: prefab_mug
+  PrefabFolderName: Profab_datacollection_3
   objNames: []
   allObjects: []
   densityFactor: 1
@@ -3169,7 +3169,7 @@ MonoBehaviour:
   posProgressBarPrefab: {fileID: 1503794477145344827, guid: 26724888c34553a42864aa58193d6afd, type: 3}
   gesProgressBarPrefab: {fileID: 1503794477145344827, guid: 08765c03ab2da6f4a9203e1abbfe9264, type: 3}
   originalMaterial: {fileID: -3033667219593020291, guid: 54f2703ebf4fa184ba66a49b41d7d1ce, type: 3}
-  timeLimit: 60
+  timeLimit: 20
   Target: {fileID: 0}
   UserName: Test_A
   SessionTypes: C

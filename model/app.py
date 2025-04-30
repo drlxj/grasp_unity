@@ -85,8 +85,8 @@ while True:
 
     # print("Object Positions:")
     # print(obj_positions)
-    print("obj_rot_matrices:")
-    print(obj_rot_matrices)
+    # print("obj_rot_matrices:")
+    # print(obj_rot_matrices)
 
     # hand pose
     hand_joint_position_unity = torch.Tensor(telemetry_packet.hand_joint_position) # (n_joints, 3)
@@ -118,7 +118,7 @@ while True:
     axis = trimesh.creation.axis(origin_size=0.02, axis_length=0.1)
 
     scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh, axis])
-    scene.show()
+    # scene.show()
 
 
     """
@@ -151,7 +151,7 @@ while True:
     """
     Sending
     """
-    obj_transls = torch.einsum("ik,nk->ni", R_camera.T, obj_transls)
+    # obj_transls = torch.einsum("ik,nk->ni", R_camera.T, obj_transls)
     obj_transls = torch.einsum("ik,nk->ni", R_unity2python, obj_transls)
     obj_transls = obj_transls.detach().cpu().numpy()
 

@@ -3,13 +3,14 @@ import csv
 from datetime import datetime
 import numpy as np
 import sys
+import glob
 
 if len(sys.argv) < 2:
     print("Error: Please provide the experiment timestamp as an argument.")
     sys.exit(1)
 
 INPUT_EXPERIMENT_TIMESTAMP = sys.argv[1]
-ROOT_DIR = f"../DistanceGrasp/Assets/LogData/{INPUT_EXPERIMENT_TIMESTAMP}"
+ROOT_DIR = f"../user_study_data/{INPUT_EXPERIMENT_TIMESTAMP}"
 OUTPUT_PATH = f"{ROOT_DIR}/processed_data"
 FILE_NAME = "processed_data.csv"
 VALID_TYPES = ["C", "P", "G", "O"]
@@ -44,11 +45,20 @@ def create_output_directory_and_file(output_path):
 
 
 def get_objects_list():
-    rotation_file = f"{ROOT_DIR}/meta_data/RotationSeqData.csv"
-    # Read the rotation file and get the objects list
-    # read tht first column of the file and return it as a list,  keep the first raw bacause there is no header
-    with open(rotation_file, "r") as f:
-        objects_list = [line.split(",")[0] for line in f.readlines() if line.strip()]
+    # Use glob to find all matching files
+    rotation_files = glob.glob(f"{ROOT_DIR}/*/GraspingData.csv")
+    
+    if not rotation_files:
+        raise FileNotFoundError(f"No files found matching pattern: {ROOT_DIR}/*/GraspingData.csv")
+    
+    # Read the first column of all matching files and return as a list
+    objects_list = []
+    for rotation_file in rotation_files:
+        with open(rotation_file, "r") as f:
+            objects_list.extend([line.split(",")[0] for line in f.readlines() if line.strip()])
+
+    # Deduplicate the list
+    objects_list = list(set(objects_list))
 
     return objects_list
 
@@ -59,6 +69,7 @@ def write_header_and_objects_list_to_file(exist_session_types, objects_list, out
     for session_type in exist_session_types:
         header.append(f"{session_type}_CatchDuration")
         header.append(f"{session_type}_Accuracy")
+        # header.append(f"{session_type}_NumberOfAttempts")
 
     # Write the header and objects list to the file
     with open(output_filename, "w") as f:
@@ -71,7 +82,7 @@ def write_header_and_objects_list_to_file(exist_session_types, objects_list, out
             f.write(",".join(row) + "\n")
 
 
-def calculate_catch_duration_and_accuracy(session_type):
+def calculate_catch_duration_and_accuracy_and_attempts(session_type):
     session_folder = os.path.join(ROOT_DIR, session_type)
     # Read the session file
     grasping_file = os.path.join(session_folder, "GraspingData.csv")
@@ -90,9 +101,12 @@ def calculate_catch_duration_and_accuracy(session_type):
             wrong_attempt = int(row[1])
             start_time = datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f")
             end_time = datetime.strptime(row[3], "%Y-%m-%d %H:%M:%S.%f")
+            
+            # Calculate number of attempts
+            number_of_attempts = wrong_attempt + 1
 
             # Calculate accuracy
-            accuracy = round(1 / (wrong_attempt + 1), 2)
+            accuracy = round(1 / number_of_attempts, 2)
 
             # Calculate duration in seconds
             duration = (end_time - start_time).total_seconds()
@@ -115,8 +129,10 @@ def write_data_to_file(results, output_filename, index):
         # Check if the object name exists in the results
         if obj_name in results:
             duration, accuracy = results[obj_name]
+            # duration, number_of_attempts = results[obj_name]
             line[index * 2 + 1] = str(duration)  # CatchDuration
             line[index * 2 + 2] = str(accuracy)  # Accuracy
+            # line[index * 2 + 2] = str(number_of_attempts) # NumberOfAttempts
             # print("line:", line)
 
         # Update the line in the lines list
@@ -185,7 +201,7 @@ def main():
     # and write it to the file
     index = 0
     for session_type in exist_session_types:
-        result = calculate_catch_duration_and_accuracy(session_type)
+        result = calculate_catch_duration_and_accuracy_and_attempts(session_type)
         write_data_to_file(result, output_filename, index)
         index += 1
     

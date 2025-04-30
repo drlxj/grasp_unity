@@ -24,7 +24,7 @@ target_obj_name_list = ["apple","banana","binoculars","bowl","camera",
 # target_obj_name_list = ["plate"]
 timestamp = "t_0"
 
-test_user_id = "s28"
+test_user_id = "s31"
 grasping_position = torch.tensor([0.0, 0.0, 0.5])
 
 for target_obj_name in target_obj_name_list:
