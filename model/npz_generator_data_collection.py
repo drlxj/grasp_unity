@@ -13,18 +13,22 @@ import re
 
 obj_dataset = ObjectDataset()
 
-LogDataDir = r"../collected_data/"
+
 target_obj_name_list = ["apple","banana","binoculars","bowl","camera",
                         "cup","hammer","knife", "mouse","mug",
                         "spheremedium","teapot","toothpaste","toruslarge","watch",
                         "waterbottle","wineglass", "crackerbox", "disklid", "pottedmeatcan", 
                         "plate","fryingpan","headphones","smartphone","spherelarge",
-                        "spheresmall"]
+                        "spheresmall","stanfordbunny"]
 # target_obj_name_list = ["crackerbox", "disklid", "pottedmeatcan", "plate"]
 # target_obj_name_list = ["plate"]
+
+test_user_id = "s32"
+LogDataDir = f"../collected_data/{test_user_id}/"
+
 timestamp = "t_0"
 
-test_user_id = "s31"
+
 grasping_position = torch.tensor([0.0, 0.0, 0.5])
 
 for target_obj_name in target_obj_name_list:
