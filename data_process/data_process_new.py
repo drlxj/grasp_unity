@@ -110,8 +110,8 @@ def write_header_and_method_list_to_summary_filename(exist_session_types, summar
             row = [session_type] + [""] * 5  # Empty placeholders for session data
             f.write(",".join(row) + "\n")
 
-        summary_row = ["summary"] + [""] * 5
-        f.write(",".join(summary_row) + "\n")
+        # summary_row = ["summary"] + [""] * 5
+        # f.write(",".join(summary_row) + "\n")
 
 
 def calculate_catch_duration_and_accuracy_and_attempts(session_type):
@@ -235,6 +235,7 @@ def calculate_mean_and_variance(session_type, summary_filename):
         headers = next(csv_reader)  # Skip the header
         rows = list(csv_reader)
 
+    per_method_dur_acc_dict = {}
     for row in rows:
         if row[0] == session_type:
             summary_current_session_type = summary_dict[session_type]
@@ -250,67 +251,105 @@ def calculate_mean_and_variance(session_type, summary_filename):
                 if session_type == "C":
                     gesture_is_larger_list.append(value[3])
 
-            duration_mean = round(np.mean(float(duration_list)), 2)
-            duration_variance = round(np.var(float(duration_list), ddof=0), 2)  # Population variance
-            accuracy_mean = round(np.mean(float(accuracy_list)), 2)
-            accuracy_variance = round(np.var(float(accuracy_list), ddof=0), 2)  # Population variance
+            # Convert string elements in the list to float
+            duration_list = [float(x) for x in duration_list]
+            accuracy_list = [float(x) for x in accuracy_list]
+            duration_mean = round(np.mean(duration_list), 2)
+            duration_variance = round(np.var(duration_list, ddof=0), 2)  # Population variance
+            accuracy_mean = round(np.mean(accuracy_list), 2)
+            accuracy_variance = round(np.var(accuracy_list, ddof=0), 2)  # Population variance
             gesture_percent = ""
             if session_type == "C":
-                gesture_is_larger_list = [int(x) for x in gesture_is_larger_list if x != ""]
-                # only "1" and "0" are valid values
-                length_gesture_is_larger_list = [int(x) for x in gesture_is_larger_list if x == "1" or x == "0"]
-                gesture_percent = round(sum(gesture_is_larger_list) / length_gesture_is_larger_list, 2)
+                # print(f"gesture_is_larger_list: {gesture_is_larger_list}")  ['1', '1', '0', '0', '0']
+
+                # amount of '1' number of gesture_is_larger_list
+                count_of_ones = gesture_is_larger_list.count('1')
+
+                # amount of '0' number of gesture_is_larger_list
+                count_of_zeros = gesture_is_larger_list.count('0')
+
+                gesture_percent = round(count_of_ones / (count_of_ones + count_of_zeros), 2)
 
 
-            stats = {
-                    "session_type":session_type,
+            per_method_dur_acc_dict = {
                     "duration_mean": duration_mean, 
                     "duration_var": duration_variance,
                     "acc_mean": accuracy_mean,
                     "acc_var": accuracy_variance,
                     "gesture_percent": gesture_percent
                 }
+            
+            return per_method_dur_acc_dict
+        
+def calculate_summary_mean_and_variance():
+    # get all element from per_method_summary_dict in summary_dict
+    all_duration_list = []
+    all_wrong_attempt_list = []
+    for session_type, per_method_summary_dict in summary_dict.items():
+        for key, value in per_method_summary_dict.items():
+            all_duration_list.append(value[0])
+            all_wrong_attempt_list.append(value[2])
+    
+    all_duration_list = [float(x) for x in all_duration_list if x != ""]
+    all_wrong_attempt_list = [int(x) for x in all_wrong_attempt_list if x != ""]
+    # calculate the mean and variance for all duration and accuracy
+    all_duration_mean = round(np.mean(all_duration_list), 2)
+    all_duration_variance = round(np.var(all_duration_list, ddof=0), 2)  # Population variance
+    # accuracy is round(1 / number_of_attempts, 2)
+    all_accuracy_list = []
+    for wrong_attempt in all_wrong_attempt_list:
+        accuracy = round(1 / (wrong_attempt + 1), 2)
+        all_accuracy_list.append(accuracy)
+
+    all_accuracy_mean = round(np.mean(all_accuracy_list), 2)
+    all_accuracy_variance = round(np.var(all_accuracy_list, ddof=0), 2)  # Population variance
+
+    summary_dur_acc_dict = {
+        "duration_mean": all_duration_mean, 
+        "duration_var": all_duration_variance,
+        "acc_mean": all_accuracy_mean,
+        "acc_var": all_accuracy_variance,
+        "gesture_percent": ""
+    }
+
+    return summary_dur_acc_dict
 
 
 
-    # # Initialize results dictionary
-    # stats = {"methodName":[],"mean": [], "variance": []}
+def append_summary_to_file(summary_filename, summary_dict):
+    with open(summary_filename, "r") as f:
+        csv_reader = csv.reader(f)
+        headers = next(csv_reader)
+        rows = list(csv_reader)
 
-    # # Iterate over columns starting from the second (skip objName)
-    # for i, header in enumerate(headers[1:], start=1):
-    #     try:
-    #         # Convert column values to floats, ignoring empty strings
-    #         values = [float(value) for value in columns[i] if value.strip()]
-    #         mean = round(np.mean(values), 2)
-    #         variance = round(np.var(values, ddof=0), 2)  # Population variance
-    #         stats["mean"].append(mean)
-    #         stats["variance"].append(variance)
-    #     except ValueError:
-    #         # Skip columns that cannot be converted to floats
-    #         stats["mean"].append("")
-    #         stats["variance"].append("")
+    # Update the file with the calculated values
+    for i in range(0, len(rows)):
+        line = rows[i]
+        session_type = line[0]
 
-#     return stats
+        # Check if the session type exists in the summary_dict
+        if session_type in summary_dict:
+            duration_mean = summary_dict[session_type]["duration_mean"]
+            duration_var = summary_dict[session_type]["duration_var"]
+            acc_mean = summary_dict[session_type]["acc_mean"]
+            acc_var = summary_dict[session_type]["acc_var"]
+            gesture_percent = summary_dict[session_type]["gesture_percent"]
 
-def append_stats_to_file(output_filename, stats):
-    with open(output_filename, "r") as f:
-        lines = f.readlines()
+            line[1] = str(duration_mean)  # CatchDuration mean
+            line[2] = str(duration_var)  # CatchDuration var
+            line[3] = str(acc_mean)  # Accuracy mean
+            line[4] = str(acc_var)  # Accuracy var
+            line[5] = str(gesture_percent)  # gesture percent
 
-    # Prepare mean and variance rows
-    mean_row = ["MEAN"] + stats["mean"]  # Add "MEAN" as the first cell
-    var_row = ["VAR"] + stats["variance"]  # Add "VAR" as the first cell
-
-    # Convert rows to CSV format
-    mean_line = ",".join(map(str, mean_row)) + "\n"
-    var_line = ",".join(map(str, var_row)) + "\n"
-
-    # Insert mean and variance rows at the beginning
-    lines.insert(1, mean_line)  # Insert mean row after the header
-    lines.insert(2, var_line)  # Insert variance row after the mean row
+    # print rows
+    # print(f"rows: {rows}")
 
     # Write back to the file
-    with open(output_filename, "w") as f:
-        f.writelines(lines)
+    with open(summary_filename, "w") as f:
+        # Write the header
+        f.write(",".join(headers) + "\n")
+        for row in rows:
+            f.write(",".join(row) + "\n")
     
 def main():
     exist_session_types = collection_types()
@@ -329,13 +368,17 @@ def main():
     # calculate summary statistics for each session type
     summary_filename = create_summary_file(OUTPUT_PATH)
     write_header_and_method_list_to_summary_filename(exist_session_types, summary_filename)
-    # for session_type in exist_session_types:
-    #     stats = calculate_mean_and_variance(session_type, summary_filename)
-    
+    summary_dict = {}
+    for session_type in exist_session_types:
+        per_method_dur_acc_dict = calculate_mean_and_variance(session_type, summary_filename)
+        summary_dict[session_type] = per_method_dur_acc_dict
     
 
-    # write the stats to the file
-    # append_stats_to_file(output_filename, stats)
+    # summary_dur_acc_dict = calculate_summary_mean_and_variance()
+    # summary_dict["summary"] = summary_dur_acc_dict
+
+    # # write the summary_dict to the file
+    append_summary_to_file(summary_filename, summary_dict)
 
 if __name__ == "__main__":
     main()
