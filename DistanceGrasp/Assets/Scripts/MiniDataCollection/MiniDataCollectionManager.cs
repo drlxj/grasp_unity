@@ -26,6 +26,8 @@ public class MiniDataCollectionManager : MonoBehaviour
     private List<Slider> gesProgressBars = new List<Slider>();
     public Material originalMaterial;
 
+    public string TestUserId;
+
     [Tooltip("For Each Character's meaning, check line 13-16 in Session.cs")]
     public string SessionTypes = "G";
     public GameObject CounterUI;
@@ -145,7 +147,7 @@ public class MiniDataCollectionManager : MonoBehaviour
 
     private void writeObjectLog()
     {
-        string objectInfoFolderPath = $"../collected_data/{TargetObjectName}/{start_timestamp}/meta_data/";
+        string objectInfoFolderPath = $"../collected_data/{TestUserId}/{TargetObjectName}/{start_timestamp}/meta_data/";
         if (!Directory.Exists(objectInfoFolderPath))
         {
             Directory.CreateDirectory(objectInfoFolderPath);
@@ -165,7 +167,7 @@ public class MiniDataCollectionManager : MonoBehaviour
         List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
 
         RotationSeqNameObjectList = this.GetComponent<MiniDataCollectionObjectTransformAssignment>().RotationSeqNameObjectList;
-        string RotationSeqFolderPath = $"../collected_data/{TargetObjectName}/{start_timestamp}/meta_data/";
+        string RotationSeqFolderPath = $"../collected_data/{TestUserId}/{TargetObjectName}/{start_timestamp}/meta_data/";
         if (!Directory.Exists(RotationSeqFolderPath))
         {
             Directory.CreateDirectory(RotationSeqFolderPath);
@@ -183,7 +185,7 @@ public class MiniDataCollectionManager : MonoBehaviour
     private void writeGestureLog()
     {   
 
-        string GestureFolderPath = $"../collected_data/{TargetObjectName}/{start_timestamp}/";
+        string GestureFolderPath = $"../collected_data/{TestUserId}/{TargetObjectName}/{start_timestamp}/";
         if (!Directory.Exists(GestureFolderPath))
         {
             Directory.CreateDirectory(GestureFolderPath);

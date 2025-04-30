@@ -3276,6 +3276,7 @@ MonoBehaviour:
   posProgressBarPrefab: {fileID: 1503794477145344827, guid: 26724888c34553a42864aa58193d6afd, type: 3}
   gesProgressBarPrefab: {fileID: 1503794477145344827, guid: 08765c03ab2da6f4a9203e1abbfe9264, type: 3}
   originalMaterial: {fileID: -3033667219593020291, guid: ea7d81045c087de4d93e51c3d0aa1b2c, type: 3}
+  TestUserId: s32
   SessionTypes: G
   CounterUI: {fileID: 1335248084}
   audioSource: {fileID: 1281254550}
