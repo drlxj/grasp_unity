@@ -21,10 +21,11 @@ target_obj_name_list = ["apple","banana","binoculars","bowl","camera",
                         "plate","fryingpan","headphones","smartphone","spherelarge",
                         "spheresmall","stanfordbunny"]
 # target_obj_name_list = ["crackerbox", "disklid", "pottedmeatcan", "plate"]
-# target_obj_name_list = ["plate"]
+target_obj_name_list = ["waterbottle"] 
 
 test_user_id = "s32"
-LogDataDir = f"../collected_data/{test_user_id}/"
+# LogDataDir = f"../collected_data/{test_user_id}/"
+LogDataDir = r"C:\Users\Researcher\grasping-unity\user_study_data"
 
 timestamp = "t_0"
 
@@ -179,7 +180,7 @@ for target_obj_name in target_obj_name_list:
             # Convert hand joint positions from Unity to Python coordinates
             hand_joint_position_unity = torch.Tensor(hand_joint_position)
             hand_joint_position_python = torch.einsum("ij,nj->ni", R_unity2python, hand_joint_position_unity)
-            hand_joint_position_python = torch.einsum("ij,nj->ni", R_camera, hand_joint_position_python)
+            # hand_joint_position_python = torch.einsum("ij,nj->ni", R_camera, hand_joint_position_python)
 
             # Create a point cloud for the hand
             hand_pcl_mesh = trimesh.PointCloud(hand_joint_position_python, colors=hand_pcl_colors)
@@ -205,7 +206,7 @@ for target_obj_name in target_obj_name_list:
 
             # Convert quaternion to rotation matrix
             obj_rot_matrices = quaternion_to_matrix(obj_quats_python)
-            obj_rot_matrices = torch.einsum("ik,nkj->nij", R_camera, obj_rot_matrices)
+            # obj_rot_matrices = torch.einsum("ik,nkj->nij", R_camera, obj_rot_matrices)
 
             # bps_fname = Path("data/bps_new.npz")
             # bps_basis = torch.from_numpy(np.load(bps_fname)['basis']).to(torch.float32)
@@ -225,7 +226,7 @@ for target_obj_name in target_obj_name_list:
             # Create a scene with the object and hand point clouds
             scene = trimesh.Scene([obj_pcl_mesh, hand_pcl_mesh])
 
-            # scene.show()
+            scene.show()
 
             
             obj_vertices = np.array(obj_pcl_mesh.vertices)
@@ -282,4 +283,3 @@ for target_obj_name in target_obj_name_list:
                     subject_joints_pos_rel2wrist=hand_vertices
                 )
             
-

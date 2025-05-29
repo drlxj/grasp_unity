@@ -1,0 +1,36 @@
+*.png
+*.ipynb
+*.meta
+.idea
+
+.DS_Store
+__pycache__
+
+# Remaining files
+# DistanceGrasp/*
+# !DistanceGrasp/Assets/
+# !DistanceGrasp/ProjectSettings/
+# !DistanceGrasp/UserSettings/
+# !DistanceGrasp/Packages/com.meta.xr.sdk.interaction.ovr@66.0.0
+# !DistanceGrasp/Packages/com.meta.xr.sdk.interaction@66.0.0
+
+results/
+data/
+python/files/
+session_npz_files
+
+DistanceGrasp/Temp
+DistanceGrasp/Library/
+DistanceGrasp/Build/
+DistanceGrasp/Obj/
+DistanceGrasp/Logs/
+DistanceGrasp/MemoryCaptures/
+DistanceGrasp/Assets/LogData
+DistanceGrasp/Assets/Objects
+*.fbx
+*.anim
+*.mat
+
+user_study_data/
+collected_data/
+model/files

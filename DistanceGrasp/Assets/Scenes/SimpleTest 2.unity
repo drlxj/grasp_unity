@@ -3124,11 +3124,11 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   Prefabs: []
-  PrefabFolderName: Profab_datacollection_3
+  PrefabFolderName: Prefab_25_mini
   objNames: []
   allObjects: []
   densityFactor: 1
-  boxSize: {x: 2, y: 0.5, z: 2}
+  boxSize: {x: 0.3, y: 0.3, z: 2}
   objectLayer:
     serializedVersion: 2
     m_Bits: 0
@@ -3169,10 +3169,10 @@ MonoBehaviour:
   posProgressBarPrefab: {fileID: 1503794477145344827, guid: 26724888c34553a42864aa58193d6afd, type: 3}
   gesProgressBarPrefab: {fileID: 1503794477145344827, guid: 08765c03ab2da6f4a9203e1abbfe9264, type: 3}
   originalMaterial: {fileID: -3033667219593020291, guid: 54f2703ebf4fa184ba66a49b41d7d1ce, type: 3}
-  timeLimit: 20
+  timeLimit: 15
   Target: {fileID: 0}
   UserName: Test_A
-  SessionTypes: C
+  SessionTypes: PC
   CounterUI: {fileID: 1335248084}
   ScoreUI: {fileID: 1580700207}
   PosScoreUI: {fileID: 527177707}
@@ -3206,7 +3206,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfb5b5ff1e10c354282be0a8573dfb9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fileName: rotation_candidates
+  fileName: quaternion_candidates_30_120_210_300
 --- !u!114 &1281254549
 MonoBehaviour:
   m_ObjectHideFlags: 0

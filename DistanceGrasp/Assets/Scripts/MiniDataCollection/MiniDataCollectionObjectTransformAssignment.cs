@@ -153,12 +153,12 @@ public class MiniDataCollectionObjectTransformAssignment : MonoBehaviour
                 randomIndex = UnityEngine.Random.Range(0, object_transform_set.object_rotation.Count);
             }
 
-            List<float> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];
+            List<float> object_rotation_quaternion = object_transform_set.object_rotation[randomIndex];
             rotation_unity = new Quaternion(
-                                            object_rotation_matrix[0], 
-                                            object_rotation_matrix[1], 
-                                            object_rotation_matrix[2],
-                                            object_rotation_matrix[3]
+                                            object_rotation_quaternion[0], 
+                                            object_rotation_quaternion[1], 
+                                            object_rotation_quaternion[2],
+                                            object_rotation_quaternion[3]
                                         );
 
             // List<List<float>> object_rotation_matrix = object_transform_set.object_rotation[randomIndex];

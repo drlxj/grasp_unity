@@ -3276,7 +3276,7 @@ MonoBehaviour:
   posProgressBarPrefab: {fileID: 1503794477145344827, guid: 26724888c34553a42864aa58193d6afd, type: 3}
   gesProgressBarPrefab: {fileID: 1503794477145344827, guid: 08765c03ab2da6f4a9203e1abbfe9264, type: 3}
   originalMaterial: {fileID: -3033667219593020291, guid: ea7d81045c087de4d93e51c3d0aa1b2c, type: 3}
-  TestUserId: s32
+  TestUserId: s33
   SessionTypes: G
   CounterUI: {fileID: 1335248084}
   audioSource: {fileID: 1281254550}
@@ -3297,8 +3297,8 @@ MonoBehaviour:
   ObjectCenter: {fileID: 0}
   Objects: []
   Prefabs: []
-  PrefabFolderName: Prefab_25_1
-  TargetObjName: apple
+  PrefabFolderName: Prefab_25
+  TargetObjName: teapot
   objNames: []
   allObjects: []
 --- !u!114 &1281254553
@@ -3313,8 +3313,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 502f539851a45e04dad882a8cb177326, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fileName: quaternion_candidates_20250429_171643
-  randomIndex: 1
+  fileName: quaternion_candidates_0_90_180_270
+  randomIndex: 0
 --- !u!114 &1281254554
 MonoBehaviour:
   m_ObjectHideFlags: 0
