@@ -27,6 +27,7 @@ DistanceGrasp/Logs/
 DistanceGrasp/MemoryCaptures/
 DistanceGrasp/Assets/LogData
 DistanceGrasp/Assets/Objects
+DistanceGrasp/.vscode
 *.fbx
 *.anim
 *.mat
