@@ -202,37 +202,47 @@ public class MiniDataCollectionManager : MonoBehaviour
     }
 
     private void LogGesture(int correctGestureFlag)
-    {   
-        // correctGestureFlag: 
-        // 1: can grasp
-        // 0: cannot grasp
-        // 2: not sure
-        string flag = correctGestureFlag.ToString();
+{   
+    // correctGestureFlag: 
+    // 0: cannot grasp
+    // 1: can grasp
+    // 2: not sure
+    string flag = correctGestureFlag.ToString();
 
-        TelemetryMessage currentMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
+    TelemetryMessage currentMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
 
-        Quaternion rootRotation = currentMessage.rootRotation;
-        Vector3 rootPosition = currentMessage.rootPosition;
-        Vector3[] jointPositions = currentMessage.jointPositions;
-  
-        List<string> jointStrings = new List<string>();
+    string graspingObjectName = Objects[TrialIndex].name;
 
-        string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
-        string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+    // Extract root rotation, position, and joint positions
+    string gestureInfo = GetGestureInfo(currentMessage);
 
-        foreach (var joint in jointPositions)
-        {
-            string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
-            jointStrings.Add(jointInfo);
-        }
+    // Combine flag and object name with gesture info
+    string combinedInfo = $"{flag},{graspingObjectName},{gestureInfo}";
+    gestureLogAllScores.Add(combinedInfo);
+}
 
-        string allJoints = string.Join("/", jointStrings);
+private string GetGestureInfo(TelemetryMessage currentMessage)
+{
+    Quaternion rootRotation = currentMessage.rootRotation;
+    Vector3 rootPosition = currentMessage.rootPosition;
+    Vector3[] jointPositions = currentMessage.jointPositions;
 
-        string graspingObjectName = Objects[TrialIndex].name;
+    List<string> jointStrings = new List<string>();
 
-        string combinedInfo = $"{flag},{graspingObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints}";
-        gestureLogAllScores.Add(combinedInfo);
+    string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
+    string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+
+    foreach (var joint in jointPositions)
+    {
+        string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
+        jointStrings.Add(jointInfo);
     }
+
+    string allJoints = string.Join("/", jointStrings);
+
+    // Return the formatted gesture info
+    return $"{rootRotationInfo},{rootPositionInfo},{allJoints}";
+}
 
     private bool IsLeftHandIndexPinch()
     {
@@ -282,7 +292,9 @@ public class MiniDataCollectionManager : MonoBehaviour
         TelemetryMessage currentMessage = this.GetComponent<MiniDataCollectionTrackData>().currentMessage;
         Vector3 rootPosition = currentMessage.rootPosition;
         string wristPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
+        string gestureInfo = GetGestureInfo(currentMessage);
         gestureLogAllScores[gestureLogAllScores.Count - 1] += $",{wristPositionInfo}";
+        gestureLogAllScores[gestureLogAllScores.Count - 1] += $",{gestureInfo}";
         isGrasping = false;
     }
 
