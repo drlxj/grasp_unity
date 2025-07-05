@@ -100,7 +100,6 @@ joint_colors = np.array(
 
 test_user_id = "s3"
 is_visualize = True
-grasping_position = torch.tensor([0.0, 0.0, 0.5])
 data_dir = Path("../collected_data") / test_user_id
 output_dir = Path("session_npz_files") / test_user_id
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -120,14 +119,22 @@ for obj_dir in data_dir.iterdir():
         gesture_label = trial["label"]
         is_in_reach_frame = trial["isInReachFrame"]
         is_labeled_frame = trial["isLabeledFrame"]
-        obj_pos = torch.Tensor(trial["objectPoseWorld"]["position"])[is_labeled_frame].squeeze()
-        obj_rot = torch.Tensor(trial["objectPoseWorld"]["rotation"])[is_labeled_frame].squeeze()
-        joint_pos = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
-        root_pos = joint_pos[is_labeled_frame, 0:1].squeeze()
-        leaf_pos = joint_pos[is_labeled_frame, 1:].squeeze()
+        # obj_pos_world = torch.Tensor(trial["objectPoseWorld"]["position"])
+        # obj_rot_world = torch.Tensor(trial["objectPoseWorld"]["rotation"])
+        # joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
+        
+        obj_pos_world = torch.Tensor(trial["objectPoseCamera"]["position"])
+        obj_rot_world = torch.Tensor(trial["objectPoseCamera"]["rotation"])
+        joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionCamera"])
 
-        hand_pts = create_hand_pointcloud(leaf_pos, root_pos, R_unity2python, with_root=True)
-        obj_rot_matrix = get_object_rotation_matrix(obj_rot, R_unity2python)
+        obj_pos_in_labeled_frame = obj_pos_world[is_labeled_frame].squeeze()
+        obj_rot_in_labeled_frame = obj_rot_world[is_labeled_frame].squeeze()
+        
+        root_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 0:1].squeeze()
+        leaf_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 1:].squeeze()
+
+        hand_pts = create_hand_pointcloud(leaf_pos_in_labeled_frame, root_pos_in_labeled_frame, R_unity2python, with_root=True)
+        obj_rot_matrix = get_object_rotation_matrix(obj_rot_in_labeled_frame, R_unity2python)
         obj_types = [object_name]
         obj_pcl = obj_dataset.get_pcl(obj_types, obj_rot_matrix)
         obj_bps = bps.encode(obj_pcl.reshape(-1, 3), feature_type=["dists"])["dists"]
@@ -143,11 +150,11 @@ for obj_dir in data_dir.iterdir():
             scene.show()
 
         if gesture_label == 1:
-            obj_trans = grasping_position - torch.tensor(root_pos)
+            obj_trans = obj_pos_world[is_in_reach_frame].squeeze() - torch.tensor(root_pos_in_labeled_frame)
             obj_trans = convert_unity_to_python(obj_trans.unsqueeze(0).float(), R_unity2python)
-            in_reach_leaf =joint_pos[is_in_reach_frame, 1:].squeeze()
-            in_reach_pts = create_hand_pointcloud(in_reach_leaf, root_pos, R_unity2python, with_root=True)
-            root_positions.append(root_pos)
+            in_reach_leaf =joint_pos_world[is_in_reach_frame, 1:].squeeze()
+            in_reach_pts = create_hand_pointcloud(in_reach_leaf, root_pos_in_labeled_frame, R_unity2python, with_root=True)
+            root_positions.append(root_pos_in_labeled_frame)
 
             if is_visualize:
                 scene = trimesh.Scene()
@@ -157,15 +164,17 @@ for obj_dir in data_dir.iterdir():
                 add_coordinate_frame(scene)
                 set_camera(scene)
                 scene.show()
-
-            save_path = output_dir / f"{object_name}_{trial_index}" / "t_0" / "features.npz"
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            # save_feature_file(save_path, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), in_reach_pts.numpy())
+            else:
+                save_path = output_dir / f"{object_name}_{trial_index}" / "t_0" / "features.npz"
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                save_feature_file(save_path, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), in_reach_pts.numpy())
         else:
+            if is_visualize: 
+                continue
             fname = "features_counter.npz" if gesture_label == 0 else f"features_not_sure_{object_name}.npz"
             save_dir = output_dir if gesture_label == 0 else Path("session_npz_files") / "not_sure"
             save_dir.mkdir(parents=True, exist_ok=True)
-            # save_feature_file(save_dir / fname, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy())
+            save_feature_file(save_dir / fname, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy())
 
 
 root_positions = np.array(root_positions)
