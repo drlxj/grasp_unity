@@ -24,6 +24,10 @@ def create_hand_pointcloud(joint_positions, root_position, R, with_root=True):
         hand_pts = torch.cat([torch.zeros((1, 3)), hand_pts], dim=0)
     return hand_pts
 
+# def create_hand_pointcloud(joint_positions, root_position, R, with_root=True):
+#     hand_pts = torch.cat([root_position, joint_positions], dim=0)
+#     return convert_unity_to_python(hand_pts, R) 
+
 def visualize_hand_with_skeleton(hand_pts, joint_colors, scene):
     hand_mesh = trimesh.PointCloud(hand_pts, colors=joint_colors)
     scene.add_geometry(hand_mesh)
@@ -71,10 +75,10 @@ def save_feature_file(path, obj_rot, obj_pcl, bps_feat, obj_trans, hand_verts, i
     np.savez(
         path,
         object_orientation=obj_rot.squeeze().detach().cpu(),
-        object_pointcloud=obj_pcl,
-        object_bps=bps_feat.squeeze().detach().cpu(),
-        object_translation=obj_trans.squeeze().detach().cpu(),
-        subject_joints_pos_rel2wrist=hand_verts,
+        object_pointcloud=obj_pcl, #(1024, 3)
+        object_bps=bps_feat.squeeze().detach().cpu(), # (1, 4096)
+        object_translation=obj_trans.squeeze().detach().cpu(), # (1, 3)
+        subject_joints_pos_rel2wrist=hand_verts, # (21, 3)
         in_reach_subject_joints_pos_rel2wrist=in_reach_hand if in_reach_hand is not None else None,
     )
 
@@ -99,85 +103,91 @@ joint_colors = np.array(
 )
 
 test_user_id = "s3"
-is_visualize = True
+is_visualize = False
 data_dir = Path("../collected_data") / test_user_id
 output_dir = Path("session_npz_files") / test_user_id
 output_dir.mkdir(parents=True, exist_ok=True)
 
 root_positions = []
+count_dir = 0
+idx = 0
 for obj_dir in data_dir.iterdir():
     if not obj_dir.is_dir():
         continue
-    json_file = next(obj_dir.glob("**/all_trials.json"), None)
-    
-    with open(json_file, "r") as f:
-        trials = json.load(f)
+    json_files = list(obj_dir.glob("**/all_trials.json"))
 
-    for trial in trials:
-        object_name = trial["objectName"]
-        trial_index = trial["trialIndex"]
-        gesture_label = trial["label"]
-        is_in_reach_frame = trial["isInReachFrame"]
-        is_labeled_frame = trial["isLabeledFrame"]
-        # obj_pos_world = torch.Tensor(trial["objectPoseWorld"]["position"])
-        # obj_rot_world = torch.Tensor(trial["objectPoseWorld"]["rotation"])
-        # joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
-        
-        obj_pos_world = torch.Tensor(trial["objectPoseCamera"]["position"])
-        obj_rot_world = torch.Tensor(trial["objectPoseCamera"]["rotation"])
-        joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionCamera"])
+    for json_file in json_files:
+        with open(json_file, "r") as f:
+            trials = json.load(f)
 
-        obj_pos_in_labeled_frame = obj_pos_world[is_labeled_frame].squeeze()
-        obj_rot_in_labeled_frame = obj_rot_world[is_labeled_frame].squeeze()
-        
-        root_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 0:1].squeeze()
-        leaf_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 1:].squeeze()
+        for trial in trials:
+            object_name = trial["objectName"]
+            trial_index = trial["trialIndex"]
+            gesture_label = trial["label"]
+            is_in_reach_frame = trial["isInReachFrame"]
+            is_labeled_frame = trial["isLabeledFrame"]
+            obj_pos_world = torch.Tensor(trial["objectPoseWorld"]["position"])
+            obj_rot_world = torch.Tensor(trial["objectPoseWorld"]["rotation"])
+            joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
+            
+            # obj_pos_world = torch.Tensor(trial["objectPoseCamera"]["position"])
+            # obj_rot_world = torch.Tensor(trial["objectPoseCamera"]["rotation"])
+            # joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionCamera"])
 
-        hand_pts = create_hand_pointcloud(leaf_pos_in_labeled_frame, root_pos_in_labeled_frame, R_unity2python, with_root=True)
-        obj_rot_matrix = get_object_rotation_matrix(obj_rot_in_labeled_frame, R_unity2python)
-        obj_types = [object_name]
-        obj_pcl = obj_dataset.get_pcl(obj_types, obj_rot_matrix)
-        obj_bps = bps.encode(obj_pcl.reshape(-1, 3), feature_type=["dists"])["dists"]
-        obj_trans = convert_unity_to_python(torch.tensor([[0.0, 0.0, 0.0]]), R_unity2python)
-
-        if is_visualize:
-            scene = trimesh.Scene()
-            visualize_hand_with_skeleton(hand_pts.numpy(), joint_colors, scene)
-            obj_mesh = trimesh.PointCloud(obj_pcl[0] + obj_trans, colors=np.tile([255, 0, 0, 255], (obj_pcl[0].shape[0], 1)))
-            scene.add_geometry(obj_mesh)
-            add_coordinate_frame(scene)
-            set_camera(scene)
-            scene.show()
-
-        if gesture_label == 1:
-            obj_trans = obj_pos_world[is_in_reach_frame].squeeze() - torch.tensor(root_pos_in_labeled_frame)
-            obj_trans = convert_unity_to_python(obj_trans.unsqueeze(0).float(), R_unity2python)
-            in_reach_leaf =joint_pos_world[is_in_reach_frame, 1:].squeeze()
-            in_reach_pts = create_hand_pointcloud(in_reach_leaf, root_pos_in_labeled_frame, R_unity2python, with_root=True)
-            root_positions.append(root_pos_in_labeled_frame)
+            obj_pos_in_labeled_frame = obj_pos_world[is_labeled_frame].squeeze()
+            obj_rot_in_labeled_frame = obj_rot_world[is_labeled_frame].squeeze()
+            
+            root_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 0:1].squeeze(0)
+            leaf_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 1:].squeeze(0)
+            hand_pts = create_hand_pointcloud(leaf_pos_in_labeled_frame, root_pos_in_labeled_frame, R_unity2python, with_root=True)
+            
+            obj_rot_matrix = get_object_rotation_matrix(obj_rot_in_labeled_frame, R_unity2python)
+            obj_pcl = obj_dataset.get_pcl([object_name], obj_rot_matrix)
+            obj_bps = bps.encode(obj_pcl.reshape(-1, 3), feature_type=["dists"])["dists"]
+            obj_trans = convert_unity_to_python(torch.tensor([[0.0, 0.0, 0.0]]), R_unity2python)
 
             if is_visualize:
                 scene = trimesh.Scene()
-                visualize_hand_with_skeleton(in_reach_pts.numpy(), joint_colors, scene)
+                visualize_hand_with_skeleton(hand_pts.numpy(), joint_colors, scene)
                 obj_mesh = trimesh.PointCloud(obj_pcl[0] + obj_trans, colors=np.tile([255, 0, 0, 255], (obj_pcl[0].shape[0], 1)))
                 scene.add_geometry(obj_mesh)
                 add_coordinate_frame(scene)
                 set_camera(scene)
                 scene.show()
+
+            if gesture_label == 1:
+                in_reach_root = joint_pos_world[is_in_reach_frame, 0:1].squeeze(0)
+                in_reach_leaf =joint_pos_world[is_in_reach_frame, 1:].squeeze(0)
+                in_reach_pts = create_hand_pointcloud(in_reach_leaf, in_reach_root, R_unity2python, with_root=True)
+
+                obj_trans = obj_pos_world[is_in_reach_frame] - in_reach_root
+                obj_trans = convert_unity_to_python(obj_trans.float(), R_unity2python)
+                root_positions.append(root_pos_in_labeled_frame.squeeze())
+
+                if is_visualize:
+                    scene = trimesh.Scene()
+                    visualize_hand_with_skeleton(in_reach_pts.numpy(), joint_colors, scene)
+                    obj_mesh = trimesh.PointCloud(obj_pcl[0] + obj_trans, colors=np.tile([255, 0, 0, 255], (obj_pcl[0].shape[0], 1)))
+                    scene.add_geometry(obj_mesh)
+                    add_coordinate_frame(scene)
+                    set_camera(scene)
+                    scene.show()
+                else:
+                    save_path = output_dir / f"{object_name}_{idx}" / "t_0" / "features.npz"
+                    save_path.parent.mkdir(parents=True, exist_ok=True)
+                    save_feature_file(save_path, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), in_reach_pts.numpy())
             else:
-                save_path = output_dir / f"{object_name}_{trial_index}" / "t_0" / "features.npz"
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-                save_feature_file(save_path, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), in_reach_pts.numpy())
-        else:
-            if is_visualize: 
-                continue
-            fname = "features_counter.npz" if gesture_label == 0 else f"features_not_sure_{object_name}.npz"
-            save_dir = output_dir if gesture_label == 0 else Path("session_npz_files") / "not_sure"
-            save_dir.mkdir(parents=True, exist_ok=True)
-            save_feature_file(save_dir / fname, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy())
+                if is_visualize: 
+                    continue
+                fname = "features_counter.npz" if gesture_label == 0 else f"features_not_sure_{object_name}.npz"
+                save_dir = output_dir / f"{object_name}_{idx}" / "t_0"  if gesture_label == 0 else Path("session_npz_files") / "not_sure"
+                save_dir.mkdir(parents=True, exist_ok=True)
+                save_feature_file(save_dir / fname, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy())
+            idx += 1
 
+print(idx)
 
-root_positions = np.array(root_positions)
+root_positions = torch.cat(root_positions).reshape(-1, 3).numpy()
 # project root positions to the xy plane and visualize the point distribution with matplotlib, and make (0, 0) as the figure center
 root_positions_xy = root_positions[:, :2]
 import matplotlib.pyplot as plt
@@ -194,5 +204,5 @@ plt.xlabel('X')
 plt.ylabel('Y')
 plt.title('Root Positions Projected to XY Plane')
 plt.gca().set_aspect('equal', adjustable='box')
-plt.savefig('root_positions_xy_s2.png', dpi=300)
+plt.savefig(f'root_positions_xy_{test_user_id}.png', dpi=300)
 plt.show()
