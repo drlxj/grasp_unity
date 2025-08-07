@@ -74,7 +74,8 @@ public class TrialLogger
     public string targetObjectName;
     public string objectName;
     public int trialIndex;
-    public int label;
+    public int oorLabel;
+    public int irLabel;
 
     public PoseArray objectPoseWorld = new();
     public PoseArray objectPoseCamera = new();
@@ -84,11 +85,12 @@ public class TrialLogger
     public List<bool> isLabeledFrame = new();
     public List<bool> isInReachFrame = new();
 
-    public TrialLogger(string userId, string sessionId, string targetObjectName)
+    public TrialLogger(string userId, string sessionId, string targetObjectName, int trialIndex)
     {
         this.userId = userId;
         this.sessionId = sessionId;
         this.targetObjectName = targetObjectName;
+        this.trialIndex = trialIndex;
     }
 
     public void RecordFrame(HandVisual hand, GameObject obj, Camera cam, bool isLabeled = false, bool isInReach = false)
@@ -108,9 +110,16 @@ public class TrialLogger
         cameraPoseWorld.Add(cam.transform.position, cam.transform.rotation);
     }
 
-    public void SetLabel(int gestureLabel, string objectName)
+    public void SetLabel(int gestureLabel, string objectName, bool isInReach)
     {
-        this.label = gestureLabel;
+        if (isInReach)
+        {
+            this.irLabel = gestureLabel;
+        }
+        else
+        {
+            this.oorLabel = gestureLabel;
+        }
         this.objectName = objectName;
     }
 }

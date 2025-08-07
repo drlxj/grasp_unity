@@ -25,6 +25,7 @@ public class MiniDataCollectionSession : MonoBehaviour
     private GameObject[] roundPrefabs;
     private GameObject[] Objects;
 
+    private Vector3 initial_position_obj = new Vector3(0.0f,-0.1f, 0.45f);
     private string sessionId;
     private int roundIndex;
     private int roundLength;
@@ -47,6 +48,9 @@ public class MiniDataCollectionSession : MonoBehaviour
     private TrialLogger currentTrialLogger;
     private List<TrialLogger> allTrialLogs = new();
     private bool isRecordingContinuous = false;
+
+    private Dictionary<string, int> replicateCounter = new();  // 记录“这个物体已经录了几次” → 决定 0/120/240°
+    private int currentReplicateIndex = 0;  // 本 round 是该物体的第几次（0/1/2）
     // #if UNITY_EDITOR
     // private GameObjectRecorder handRecorder;
     // private GameObjectRecorder targetRecorder;
@@ -54,9 +58,50 @@ public class MiniDataCollectionSession : MonoBehaviour
 
     void Start()
     {
+        // 1. Load all prefabs
         allPrefabs = Resources.LoadAll<GameObject>(PrefabFolderName);
-        roundPrefabs = allPrefabs.OrderBy(_ => UnityEngine.Random.value).ToArray();
+        var allObjectNames = allPrefabs.Select(p => p.name).ToList();
+
+        // 2. Read existing recordings(#recordings for each object)
+        var recordingCount = CountExistingRecordings(TestUserId);
+
+        // 3. Initialize replicateCounter: how many times each object has been recorded 
+        replicateCounter = new Dictionary<string, int>(recordingCount);
+
+        // 4. Determine which objects to record, and how many times for each object
+        List<GameObject> finalList = new();
+        foreach (var prefab in allPrefabs)
+        {
+            string name = prefab.name;
+            int existingCount = recordingCount.ContainsKey(name) ? recordingCount[name] : 0;
+            int toAdd = Mathf.Max(0, 3 - existingCount); // 还需要录几次
+            for (int i = 0; i < toAdd; i++)
+            {
+                finalList.Add(prefab); // 每需要录一次，就加入一份
+            }
+        }
+
+        // 5. If no objects to record, exit the session
+        if (finalList.Count == 0)
+        {
+            Debug.Log("[Session] All required rounds already recorded for this user.");
+    #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+    #else
+            Application.Quit();
+    #endif
+            return;
+        }
+
+
+        // // 5. Shuffle the final list to randomize the order of rounds
+        // roundPrefabs = finalList.OrderBy(_ => UnityEngine.Random.value).ToArray();
+        roundPrefabs = finalList.ToArray();
+
+        // 7. Set #rounds
         roundLength = roundPrefabs.Length;
+
+        // 8. Start the first round
         roundIndex = 0;
         StartNextRound();
     }
@@ -123,15 +168,22 @@ public class MiniDataCollectionSession : MonoBehaviour
         }
 
         targetObjectName = roundPrefabs[roundIndex].name;
-        Debug.Log($"[Session] Starting round {roundIndex + 1} with target {targetObjectName}");
+
+        // —— According to history determine current replicateIndex (0/1/2) —— //
+        if (!replicateCounter.ContainsKey(targetObjectName))
+            replicateCounter[targetObjectName] = 0;       // The object has never been recorded before
+
+        currentReplicateIndex = replicateCounter[targetObjectName] % 3; // 0→1→2
+        replicateCounter[targetObjectName] += 1;  
+
+
+        Debug.Log($"[Session] Round {roundIndex + 1} | Target {targetObjectName} | replicate {currentReplicateIndex}");
 
         ClearPreviousObjects();
         InitializeRoundObjects();
         InitializeRoundParameters();
 
-        // isRoundRunning = true;
         waitingForUserConfirm = true;
-        // nextRoundButton.gameObject.SetActive(true);
 
         // #if UNITY_EDITOR
         // if (handToRecord != null)
@@ -182,11 +234,25 @@ public class MiniDataCollectionSession : MonoBehaviour
             instance.name = shuffled[i].name; 
             instance.transform.position = new Vector3(i, 0, 2);
 
-            Quaternion originalRotation = instance.transform.rotation;
-            float randomY = UnityEngine.Random.Range(-30f, 30f);
-            Quaternion randomYRotation = Quaternion.Euler(0, randomY, 0);
-            Quaternion newRotation = randomYRotation * originalRotation; ;
-            instance.transform.rotation = newRotation;
+            // —— Rotation Logic —— //
+            Quaternion baseRot = instance.transform.rotation;
+            float yAngle;
+            float[] preset = { 0f, 120f, 240f };
+            if (instance.name == targetObjectName)         // target object: 0/120/240°
+            {
+                yAngle = preset[currentReplicateIndex];
+                if (currentReplicateIndex != 0) // 如果不是第一次录制，则随机偏移
+                {
+                    float delta_yAngle = UnityEngine.Random.Range(-60f, 60f);
+                    yAngle += delta_yAngle;
+                }
+            }
+            else                                           // distract object: random choose from 0/120/240°
+            {
+                float delta_yAngle = UnityEngine.Random.Range(-60f, 60f);
+                yAngle = preset[UnityEngine.Random.Range(0, preset.Length)] + delta_yAngle;
+            }
+            instance.transform.rotation = Quaternion.Euler(0, yAngle, 0) * baseRot;
 
             Objects[i] = instance;
         }
@@ -212,107 +278,108 @@ public class MiniDataCollectionSession : MonoBehaviour
 
         isRecordingContinuous = true;
         allTrialLogs.Clear();
-        currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName);
+        currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName, trialIndex);
     }
 
     private void RunRound()
-    {
-         if (trialIndex == trialLength)
+    {        
+        if (trialIndex == trialLength)
         {
             EndRound();
             return;
         }
 
-        if (IsPinching(OVRHand.HandFinger.Index, ref indexFingerIsPinching))
+
+            
+        if (isInReach)
         {
-            if (!isInReach)
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+            {
+                RecordInReach(1);
+                SaveTrial();
+                trialIndex++;
+                if (trialIndex < trialLength)
+                {
+                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName, trialIndex);
+                    MoveObject();
+                }
+                isInReach = false;
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+            {
+                RecordInReach(0);
+                SaveTrial();
+                trialIndex++;
+                if (trialIndex < trialLength)
+                {
+                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName, trialIndex);
+                    MoveObject();
+                }
+                isInReach = false;
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+            {
+                RecordInReach(2);
+                SaveTrial();
+                trialIndex++;
+                if (trialIndex < trialLength)
+                {
+                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName, trialIndex);
+                    MoveObject();
+                }
+                isInReach = false;
+            }
+            
+            
+        }
+        
+        else if (!isInReach)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
             {
                 RecordTrial(1);
                 MoveObjectToGraspingPosition();
                 isInReach = true;
             }
-            else
-            {
-                RecordInReach();
-                SaveTrial();
-                trialIndex++;
-                if (trialIndex < trialLength)
-                {
-                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName);
-                    MoveObject();
-                }
-                isInReach = false;
-            }
-        }
-        else if (!isInReach)
-        {
-            if (IsPinching(OVRHand.HandFinger.Middle, ref midFingerIsPinching))
+            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
             {
                 RecordTrial(0);
                 SaveTrial();
                 trialIndex++;
                 if (trialIndex < trialLength)
                 {
-                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName);
+                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName, trialIndex);
                     MoveObject();
                 }
             }
-            else if (IsPinching(OVRHand.HandFinger.Ring, ref ringFingerIsPinching))
+            else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
             {
                 RecordTrial(2);
                 SaveTrial();
                 trialIndex++;
                 if (trialIndex < trialLength)
                 {
-                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName);
+                    currentTrialLogger = new TrialLogger(TestUserId, sessionId, targetObjectName, trialIndex);
                     MoveObject();
                 }
             }
         }
-    // if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
-    //     {
-    //         if (!isInReach)
-    //         {
-    //             RecordTrialGesture(1);
-    //             MoveObjectToGraspingPosition();
-    //             isInReach = true;
-    //         }
-    //         else
-    //         {
-    //             // Second index pinch confirms in-reach gesture 
-    //             currentTrialRecord.inReachGesture = new Gesture(rightHandVisual); // labeledSessionData is updated as well
-    //             MoveObject();                    // advance to next object
-    //             isInReach = false;              
-    //         }
-    //     }
-    //    else if (!isInReach)
-    //     {
-    //         if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
-    //         {
-    //             RecordTrialGesture(0);
-    //             MoveObject();
-    //         }
-    //         else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
-    //         {
-    //             RecordTrialGesture(2);
-    //             MoveObject();
-    //         }
-    //     }
     }
 
 
 
-   private void RecordTrial(int gestureLabel)
+    private void RecordTrial(int gestureLabel)
     {
         GameObject obj = Objects[trialIndex];
         currentTrialLogger.RecordFrame(rightHandVisual, obj, mainCamera, isLabeled: true);
-        currentTrialLogger.SetLabel(gestureLabel, obj.name);
+        currentTrialLogger.SetLabel(gestureLabel, obj.name, isInReach = false);
     }
 
-    private void RecordInReach()
+    private void RecordInReach(int gestureLabel)
     {
         GameObject obj = Objects[trialIndex];
         currentTrialLogger.RecordFrame(rightHandVisual, obj, mainCamera, isInReach: true);
+        currentTrialLogger.SetLabel(gestureLabel, obj.name, isInReach = true);
     }
 
     private void SaveTrial()
@@ -367,7 +434,7 @@ public class MiniDataCollectionSession : MonoBehaviour
         {
             if (obj.name == Objects[trialIndex].name)
             {
-                obj.transform.position = new Vector3(0.0f, 0.0f, 0.5f);
+                obj.transform.position = initial_position_obj;
                 obj.transform.rotation = initialTransforms[obj].Item2;
             }
         }
@@ -416,9 +483,20 @@ public class MiniDataCollectionSession : MonoBehaviour
 
     }
 
-    private int GetObjectTypeFromState(string objName)
+    private Dictionary<string, int> CountExistingRecordings(string userId)
     {
-        // Dummy mapping function
-        return 0;
+        string baseUserFolder = $"../collected_data/s{userId}/";
+        var result = new Dictionary<string, int>();
+
+        if (!Directory.Exists(baseUserFolder)) return result;
+
+        foreach (var objectFolder in Directory.GetDirectories(baseUserFolder))
+        {
+            string objName = Path.GetFileName(objectFolder);
+            int count = Directory.GetDirectories(objectFolder).Length;   // 每个时间戳目录算一轮
+            result[objName] = count;
+        }
+        return result;
     }
+
 }
