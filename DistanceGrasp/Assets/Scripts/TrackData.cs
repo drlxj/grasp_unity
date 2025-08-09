@@ -17,113 +17,46 @@ public class TrackData : MonoBehaviour
     public Transform ObjectCenter;
     [HideInInspector]
     public GameObject[] Objects;
-    public GameObject[] Prefabs;
-
-    public string PrefabFolderName;
-    [HideInInspector]
-    public string[] objNames;
+    
     private readonly float updateInterval = 1.0f / 15.0f; // 15 fps
     private float nextUpdateTime = 0.0f;
     private static int objCount = 0;
     private Vector3 rootPosition;
 
     private long packetId = 0;
-
-    public GameObject[] allObjects;
-    public float densityFactor = 1.0f; // 1.0 = Normal, <1.0 = Spread out, >1.0 = More compact
-    public Vector3 boxSize = new Vector3(1f, 1f, 1f); // Bounding box defining placement area
-    private int objectCount ; // Number of objects to place
-    public LayerMask objectLayer; // Set a layer for objects to check collisions
     
-    public float depth = -5f; // CHANGE THIS TO CHANGE THE DEPTH OF THE OBJECTS
     public TelemetryMessage currentMessage;
-    System.Random rng = new System.Random();
-
-    void FisherYatesShuffle(GameObject[] array)
-    {
-        for (int i = array.Length - 1; i > 0; i--)
-        {
-            int j = rng.Next(i + 1);
-
-            GameObject temp = array[i];
-            array[i] = array[j];
-            array[j] = temp;
-        }
-    }
-
-    public void FisherYatesShuffleInt(List<int> list)
-    {
-        int[] array = list.ToArray();
-
-        for (int i = array.Length - 1; i > 0; i--)
-        {
-            int j = rng.Next(i + 1);
-            int temp = array[i];
-            array[i] = array[j];
-            array[j] = temp;
-        }
-
-        for (int i = 0; i < array.Length; i++)
-        {
-            list[i] = array[i];
-        }
-    }
 
     private void Awake()
     {
-        Prefabs = Resources.LoadAll<GameObject>(PrefabFolderName);
-        FisherYatesShuffle(Prefabs);
-
-        objectCount = Prefabs.Length;
-
-        Objects = new GameObject[objectCount];
-        objNames = new string[objectCount];
-
-        Vector3 startPos = transform.position;
-        int attempts = 0;
-
-        for (int i = 0; i < objectCount; i++)
-        {
-            GameObject instance = Instantiate(Prefabs[i % Prefabs.Length]);
-            instance.name = Prefabs[i % Prefabs.Length].name;
-            bool placed = false;
-
-            while (!placed && attempts < 100) // Prevent infinite loops
-            {
-                Vector3 randomPos = new Vector3(
-                    startPos.x + UnityEngine.Random.Range(-boxSize.x / 2, boxSize.x / 2) * densityFactor,
-                    startPos.y + UnityEngine.Random.Range(-boxSize.y / 2, boxSize.y / 2) + heightOffset,
-                    startPos.z + UnityEngine.Random.Range(-boxSize.z / 2, boxSize.z / 2) * densityFactor + depth
-                );
-
-                Collider[] colliders = Physics.OverlapBox(randomPos, instance.transform.localScale / 2, Quaternion.identity, objectLayer);
-
-                if (colliders.Length == 0) // Ensure no overlap
-                {
-                    instance.transform.position = randomPos;
-                    placed = true;
-                }
-                attempts++;
-            }
-
-            Objects[i] = instance;
-            objNames[i] = instance.name;
-        }
-
-        Debug.Log($"Placed {objectCount} objects within a box of size {boxSize}.");
-
-        string objLog = $"Initial {objCount} objects: ";
-        for (int i = 0; i < objCount; i++)
-        {
-            objLog += Objects[i].name + "  ";
-            objNames[i] = Objects[i].name;
-
-        }
-        Debug.Log(objLog);
-
+        // 从Session获取物体
+        RefreshObjectReferences();
     }
 
-    
+    /// <summary>
+    /// 刷新物体引用
+    /// </summary>
+    public void RefreshObjectReferences()
+    {
+        var session = FindObjectOfType<Session>();
+        if (session != null)
+        {
+            Objects = session.GetObjects();
+            if (Objects != null)
+            {
+                objCount = Objects.Length;
+                Debug.Log($"TrackData: Loaded {objCount} objects from Session");
+            }
+            else
+            {
+                Debug.LogWarning("TrackData: No objects found in Session");
+            }
+        }
+        else
+        {
+            Debug.LogError("TrackData: No Session found in scene");
+        }
+    }
 
     private void OnEnable()
     {
@@ -134,40 +67,21 @@ public class TrackData : MonoBehaviour
         }
         // Subscribe to the JointUpdated event
         // HandVisual.JointUpdated += OnJointUpdated;
-
-        /*objCount = ObjectSet.transform.childCount;
-        for (int i = 0; i < objCount; i++)
-        {
-            Objects.Append(ObjectSet.transform.GetChild(i).gameObject);
-        }*/
-
     }
+    
     private void OnDisable()
     {
         // Unsubscribe from the JointUpdated event
         // HandVisual.JointUpdated -= OnJointUpdated;
     }
 
-
     void Start()
     {
-        
-        // if (Objects == null)
-        // {
-        //     Debug.LogError("No Objs Exist");
-        // }
-
-        // objCount = Objects.Count();
-        // objNames = new string[objCount];
-
-        // string objLog = $"Initial {objCount} objects: ";
-        // for (int i = 0; i < objCount; i++)
-        // {
-        //     objLog += Objects[i].name + "  ";
-        //     objNames[i] = Objects[i].name;
-
-        // }
-        // Debug.Log(objLog);
+        // 确保物体引用是最新的
+        if (Objects == null || Objects.Length == 0)
+        {
+            RefreshObjectReferences();
+        }
     }
 
     void Update()
@@ -308,14 +222,21 @@ public class TrackData : MonoBehaviour
         return result.ToArray();
     }
 
-
     private ObjectState[] AddObjectsToTelemetryMessage(Transform root, out string objInfo)
     {
         objInfo = string.Empty;
 
+        if (Objects == null || Objects.Length == 0)
+        {
+            Debug.LogWarning("Objects array is null or empty in AddObjectsToTelemetryMessage");
+            return new ObjectState[0];
+        }
+
         ObjectState[] objStates = new ObjectState[Objects.Length];
         for (int i = 0; i < objStates.Length; i++)
         {
+            if (Objects[i] == null) continue;
+            
             objStates[i] = new ObjectState();
 
             Vector3 relativePosGlobal = Objects[i].transform.position - root.position;

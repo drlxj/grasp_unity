@@ -102,7 +102,7 @@ public class SimpleTestManager : MonoBehaviour
             gestureLogAllScores[SessionType] = new List<string>();
         }
         
-        Objects = this.GetComponent<TrackData>().Objects;
+        Objects = FindObjectOfType<Session>().GetObjects();
 
         foreach (var obj in Objects)
         {
@@ -190,6 +190,25 @@ public class SimpleTestManager : MonoBehaviour
         tryCollectObjectLog();
         uiManager.CreateOrUpdateProgressBars(interactor.candidateScores);
         checkGraspingTimeLimit();
+        
+        // 简化的远距离交互调试
+        if (Time.frameCount % 600 == 0) // 每10秒输出一次
+        {
+            string status = $"DistanceGrab: Enabled={interactor.enabled}, HasInteractable={interactor.HasInteractable}, Target={(interactor.TargetObject != null ? interactor.TargetObject.name : "null")}";
+            
+            if (!interactor.enabled)
+            {
+                Debug.LogWarning(status + " - Interactor is disabled!");
+            }
+            else if (!interactor.HasInteractable)
+            {
+                Debug.LogWarning(status + " - No interactable detected!");
+            }
+            else
+            {
+                Debug.Log(status + " - Working normally");
+            }
+        }
     }
 
     private void checkGraspingTimeLimit()
@@ -295,6 +314,151 @@ public class SimpleTestManager : MonoBehaviour
         Occlusion = config.Occlusion;
         interactor.GestureWeight = config.Weight;
     }
+    
+    /// <summary>
+    /// 快速检查物体配置
+    /// </summary>
+    [ContextMenu("Quick Check Object Setup")]
+    public void QuickCheckObjectSetup()
+    {
+        if (Objects == null || Objects.Length == 0)
+        {
+            Debug.LogError("Objects array is null or empty!");
+            return;
+        }
+        
+        int missingComponents = 0;
+        for (int i = 0; i < Objects.Length; i++)
+        {
+            if (Objects[i] == null) continue;
+            
+            var obj = Objects[i];
+            var interactable = obj.GetComponent<DistanceHandGrabInteractable>();
+            var rigidbody = obj.GetComponent<Rigidbody>();
+            var collider = obj.GetComponent<Collider>();
+            
+            if (interactable == null || rigidbody == null || collider == null)
+            {
+                missingComponents++;
+                Debug.LogWarning($"Object {i} ({obj.name}): Missing components - Interactable:{interactable != null}, Rigidbody:{rigidbody != null}, Collider:{collider != null}");
+            }
+        }
+        
+        if (missingComponents == 0)
+        {
+            Debug.Log($"All {Objects.Length} objects have required components ✓");
+        }
+        else
+        {
+            Debug.LogWarning($"{missingComponents} objects missing required components");
+        }
+    }
+    
+    /// <summary>
+    /// 检查Detection Frustums配置
+    /// </summary>
+    [ContextMenu("Check Detection Frustums")]
+    public void CheckDetectionFrustums()
+    {
+        if (interactor == null)
+        {
+            Debug.LogError("Interactor is null!");
+            return;
+        }
+        
+        // 通过反射获取Detection Frustums
+        var interactorType = interactor.GetType();
+        var detectionFrustumsField = interactorType.GetField("_distantCandidateComputer", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        
+        if (detectionFrustumsField != null)
+        {
+            var distantCandidateComputer = detectionFrustumsField.GetValue(interactor);
+            if (distantCandidateComputer != null)
+            {
+                var computerType = distantCandidateComputer.GetType();
+                var frustumsField = computerType.GetField("_detectionFrustums", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    
+                if (frustumsField != null)
+                {
+                    var frustums = frustumsField.GetValue(distantCandidateComputer);
+                    if (frustums != null)
+                    {
+                        Debug.Log("Detection Frustums: ✓ Configured");
+                    }
+                    else
+                    {
+                        Debug.LogError("Detection Frustums: ✗ Not configured - This is likely the main issue!");
+                    }
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 强制启用交互器（用于测试）
+    /// </summary>
+    [ContextMenu("Force Enable Interactor")]
+    public void ForceEnableInteractor()
+    {
+        interactor.enabled = true;
+        isCountingDown = false;
+        Debug.Log("Force enabled interactor and disabled counting down");
+    }
+    
+    /// <summary>
+    /// 修复目标物体的组件配置
+    /// </summary>
+    [ContextMenu("Fix Target Object Components")]
+    public void FixTargetObjectComponents()
+    {
+        if (interactor.TargetObject == null)
+        {
+            Debug.LogError("Target object is null!");
+            return;
+        }
+        
+        GameObject targetObj = interactor.TargetObject;
+        var interactable = targetObj.GetComponent<DistanceHandGrabInteractable>();
+        var rigidbody = targetObj.GetComponent<Rigidbody>();
+        var collider = targetObj.GetComponent<Collider>();
+        
+        bool needsFix = false;
+        
+        if (interactable == null)
+        {
+            interactable = targetObj.AddComponent<DistanceHandGrabInteractable>();
+            needsFix = true;
+        }
+        
+        if (rigidbody == null)
+        {
+            rigidbody = targetObj.AddComponent<Rigidbody>();
+            rigidbody.isKinematic = true;
+            needsFix = true;
+        }
+        
+        if (collider == null)
+        {
+            collider = targetObj.AddComponent<BoxCollider>();
+            needsFix = true;
+        }
+        
+        if (interactable != null)
+        {
+            interactor.Target = interactable;
+        }
+        
+        if (needsFix)
+        {
+            Debug.Log($"Fixed components for {targetObj.name}");
+        }
+        else
+        {
+            Debug.Log($"{targetObj.name} already has all required components");
+        }
+    }
    
     public void InvokeTest()
     {
@@ -310,12 +474,32 @@ public class SimpleTestManager : MonoBehaviour
         GraspingStartTime = System.DateTime.Now;
         GraspingLimitedTime = GraspingStartTime.AddSeconds(timeLimit);
 
+        // 检查并确保目标物体有必要的组件
         DistanceHandGrabInteractable target = currentObject.GetComponentInChildren<DistanceHandGrabInteractable>();
+        
+        if (target == null)
+        {
+            target = currentObject.AddComponent<DistanceHandGrabInteractable>();
+        }
+
+        // 检查Rigidbody
+        var rigidbody = currentObject.GetComponent<Rigidbody>();
+        if (rigidbody == null)
+        {
+            rigidbody = currentObject.AddComponent<Rigidbody>();
+            rigidbody.isKinematic = true;
+        }
+
+        // 检查Collider
+        var collider = currentObject.GetComponent<Collider>();
+        if (collider == null)
+        {
+            collider = currentObject.AddComponent<BoxCollider>();
+        }
 
         target.ObjID = TrialIndex + 1;
 
         interactor.TargetObject = target.GetGameObject();
-
         interactor.Target = target;
 
         interactor.ResetPerformance();
@@ -352,7 +536,7 @@ public class SimpleTestManager : MonoBehaviour
                 createFolderIfNotExists($"../user_study_data/{start_timestamp}/meta_data/");
                 createSessionTypeFolderIfNotExists(SessionTypes);
                 writeObjectLog();
-                writeRotationSeqLog();
+                // writeRotationSeqLog();
                 writeGestureLog();
                 WriteGraspingLog();
                 Quit();
@@ -405,20 +589,20 @@ public class SimpleTestManager : MonoBehaviour
             }
         }
     }
-    private void writeRotationSeqLog()
-    {
-        List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
+    // private void writeRotationSeqLog()
+    // {
+    //     List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
 
-        RotationSeqNameObjectList = this.GetComponent<ObjectTransformAssignment>().RotationSeqNameObjectList;
-        string RotationSeqLogPath = $"../user_study_data/{start_timestamp}/meta_data/RotationSeqData.csv";
-        using (StreamWriter writer = new StreamWriter(RotationSeqLogPath, true))
-        {
-            foreach (var line in RotationSeqNameObjectList)
-            {
-                writer.WriteLine($"{line.Item1},{line.Item2}"); 
-            }
-        }
-    }
+    //     RotationSeqNameObjectList = this.GetComponent<ObjectTransformAssignment>().RotationSeqNameObjectList;
+    //     string RotationSeqLogPath = $"../user_study_data/{start_timestamp}/meta_data/RotationSeqData.csv";
+    //     using (StreamWriter writer = new StreamWriter(RotationSeqLogPath, true))
+    //     {
+    //         foreach (var line in RotationSeqNameObjectList)
+    //         {
+    //             writer.WriteLine($"{line.Item1},{line.Item2}"); 
+    //         }
+    //     }
+    // }
 
     private void writeGestureLog()
     {   
