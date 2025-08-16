@@ -45,7 +45,7 @@ namespace Oculus.Interaction.HandGrab
         [HideInInspector]
         public string UserID = "test";
         [HideInInspector]
-        public float GestureWeight {get; set; }
+        public float MethodID {get; set; }
         public bool DebugSwitch {get; set;}
         public List<string> candidateScores = new List<string>(); // ours: List to store the scores
 
@@ -433,15 +433,15 @@ namespace Oculus.Interaction.HandGrab
 
         /*
          * NOTE: 
-         * Compute both the shape probability and position probability to decide which object to choose
+         * Compute both the gesture probability and position probability to decide which object to choose
          */
         protected override DistanceHandGrabInteractable ComputeCandidate()
         {
-            // Add Shape Probability
+            // Add Gesture Probability
             DistanceHandGrabInteractable interactable;
             if (IsGestureProbability)
             {
-                this._distantCandidateComputer.GestureWeight = GestureWeight;
+                this._distantCandidateComputer.MethodID = MethodID;
                 interactable = _distantCandidateComputer.ComputeCandidate(
                 DistanceHandGrabInteractable.Registry, this, GestureProbabilityList, out Vector3 bestHitPoint);
                 HitPoint = bestHitPoint;
@@ -466,6 +466,7 @@ namespace Oculus.Interaction.HandGrab
 
             if (score.IsValid())
             {
+                Debug.Log($"Final validation passed for: {interactable.GetObjName()}");
                 return interactable;
             }
 

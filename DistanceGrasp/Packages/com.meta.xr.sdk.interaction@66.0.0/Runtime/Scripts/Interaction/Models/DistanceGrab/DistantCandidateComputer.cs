@@ -37,7 +37,7 @@ namespace Oculus.Interaction
         where TInteractable : Interactable<TInteractor, TInteractable>, ICollidersRef
     {
         public bool DebugSwitch {get; set;} // ours: for debug
-        public float GestureWeight {  get; set; } // ours: shape weight
+        public float MethodID {  get; set; } // ours: shape weight
         public List<string> candidateScores = new List<string>(); // ours: List to store the scores
         /// <summary>
         /// <cref="ConicalFrustum"> used to detect and select objects.
@@ -219,10 +219,10 @@ namespace Oculus.Interaction
             return bestInteractable;
         }
         /// <summary>
-        /// Ours: ComputeBestInteractable() finds the best Interactable based on both shape and direction
+        /// Ours: ComputeBestInteractable() finds the best Interactable based on both gesture and direction
         /// </summary>
         /// 
-        private List<(TInteractable candidate, float candidateScore, Vector3 hitPoint, string candidateName, float gestureScore, float posScore, float GestureWeight)> candidateData 
+        private List<(TInteractable candidate, float candidateScore, Vector3 hitPoint, string candidateName, float gestureScore, float posScore, float MethodID)> candidateData 
             = new List<(TInteractable, float, Vector3, string, float, float, float)>();
         private TInteractable ComputeBestInteractable(IEnumerable<TInteractable> candidates,
             bool narrowSearch, Dictionary<string, float> gestureProbability, out Vector3 bestHitPoint)
@@ -240,88 +240,78 @@ namespace Oculus.Interaction
             candidateScores.Add($"{"Name",-15} {"Gesture",8} {"Pos",8} {"Weight",8} {"Final",8}");
 
             // if it is not combi, use old method
-            if (GestureWeight != 0.5)
+            if (MethodID != 3.0f)
             {
                 foreach (TInteractable candidate in candidates)
                 {
-                    // Get position score of the candidate
-                    if (!_detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint))
-                        // check if user hand is in vision
-                    {
-                        if (GestureWeight < 0.01) { 
-                            DistanceHandGrabInteractable fakeTmp = candidate as DistanceHandGrabInteractable;
-                            string fakeName = fakeTmp.GetObjName();
-                            float fakeGestureScore = 0.0f;
-                            float fakeFinalScore = 0.0f;
-                            candidateScores.Add($"{fakeName,-15} {fakeGestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {fakeFinalScore,8:F4}");
-                            // use unity method
-                            continue;
-                        }
-                    }
+                    // Get position score of the candidate (O and P)
+                    _detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint);
 
-                    // Get shape score of the candidate
+                    // Get gesture score of the candidate (G)
                     DistanceHandGrabInteractable tmp = candidate as DistanceHandGrabInteractable;
                     string name = tmp.GetObjName();
                     float gestureScore = gestureProbability[name];
 
-                    // if (gestureScore < 0.65)
-                    // {
-                    //     gestureScore = 0.0f;
-                    // }
-                        
-                    // combination
-                    float finalScore = ComputeFinalScore(gestureScore, posScore, GestureWeight);
-                    // finalScore = gestureScore * posScore
-                    // marginal_probability = marginal_probability + gestureScore * posScore ;
-
-                    // candidateData.Add((candidate, finalScore, hitPoint));
-                    
                     // Store scores for display
-                    candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {finalScore,8:F4}");
-
+                    float finalScore = 0.0f;
+                    if (MethodID == 0.0f || MethodID == 1.0f) {
+                        gestureScore = 0.0f;
+                        finalScore = posScore;
+                    } else if (MethodID == 2.0f) {
+                        posScore = 0.0f;
+                        finalScore = gestureScore;
+                    }
+                    candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {MethodID,8:F2} {finalScore,8:F4}");
+                    
+                    // 输出每个候选者的详细信息
+                    Debug.Log($"Processing candidate: {name} | GestureScore: {gestureScore:F4} | PosScore: {posScore:F4} | MethodID: {MethodID:F2} | FinalScore: {finalScore:F4}");
+                    
+                    // Update best score
                     if (finalScore > bestScore)
                     {
                         bestScore = finalScore;
                         bestInteractable = candidate;
                         bestHitPoint = hitPoint;
+                        Debug.Log($"New best candidate: {name} with score {finalScore:F4}");
                     }
+                }
+                
+                // 输出最终选择的interactable
+                if (bestInteractable != null)
+                {
+                    DistanceHandGrabInteractable bestTmp = bestInteractable as DistanceHandGrabInteractable;
+                    Debug.Log($"=== FINAL SELECTION ===");
+                    Debug.Log($"Best Interactable: {bestTmp.GetObjName()}");
+                    Debug.Log($"GameObject: {bestInteractable.name}");
+                    Debug.Log($"Best Score: {bestScore:F4}");
+                    Debug.Log($"Best Hit Point: {bestHitPoint}");
+                }
+                else
+                {
+                    Debug.LogWarning("No best interactable found!");
                 }
                 
                 return bestInteractable;
             } 
             else // if it is combi, use Bayesian
             {            
-                float marginal_probability = 0.000001f;
+                float marginal_probability = 1e-6f;
                 candidateData.Clear();
 
                 foreach (TInteractable candidate in candidates)
                 {
-                    // Get position score of the candidate
-                    if (!_detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint))
-                    // check if user hand is in vision
-                    {   
-                        DistanceHandGrabInteractable fakeTmp = candidate as DistanceHandGrabInteractable;
-                        string fakeName = fakeTmp.GetObjName();
-                        float fakeGestureScore = 0.0f;
-                        float fakeFinalScore = 0.0f;
-                        candidateScores.Add($"{fakeName,-15} {fakeGestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {fakeFinalScore,8:F4}");
-                        continue;
-                    }
+                    // Get position score of the candidate 
+                    _detector.ComputeIsPointing(candidate.Colliders, narrowSearch, out float posScore, out Vector3 hitPoint);
                     
                     // Get shape score of the candidate
                     DistanceHandGrabInteractable tmp = candidate as DistanceHandGrabInteractable;
                     string name = tmp.GetObjName();
                     float gestureScore = gestureProbability[name];
 
-                    if (posScore == 0f)
-                    {
-                        posScore =  0.000001f / candidates.Count() ;
-                    }
-
                     float candidateScore = gestureScore * posScore;
                     marginal_probability = marginal_probability + gestureScore * posScore;
 
-                    candidateData.Add((candidate, candidateScore, hitPoint, name, gestureScore, posScore, GestureWeight));
+                    candidateData.Add((candidate, candidateScore, hitPoint, name, gestureScore, posScore, MethodID));
                 }
 
                 foreach (var item in candidateData)
@@ -332,19 +322,34 @@ namespace Oculus.Interaction
                     string name = item.candidateName;        
                     float gestureScore = item.gestureScore;  
                     float posScore = item.posScore;          
-                    float GestureWeight = item.GestureWeight; 
+                    float MethodID = item.MethodID; 
 
                     float finalScore =  candidateScore / marginal_probability;
 
-
-                    candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {GestureWeight,8:F2} {finalScore,8:F4}");
+                    candidateScores.Add($"{name,-15} {gestureScore,8:F4} {posScore,8:F4} {MethodID,8:F2} {finalScore,8:F4}");
 
                     if (finalScore > bestScore)
                     {
                         bestScore = finalScore;
                         bestInteractable = candidate;
                         bestHitPoint = hitPoint;
+                        Debug.Log($"New best candidate (Bayesian): {name} with score {finalScore:F4}");
                     }
+                }
+
+                // 输出最终选择的interactable（贝叶斯模式）
+                if (bestInteractable != null)
+                {
+                    DistanceHandGrabInteractable bestTmp = bestInteractable as DistanceHandGrabInteractable;
+                    Debug.Log($"=== FINAL SELECTION (Bayesian) ===");
+                    Debug.Log($"Best Interactable: {bestTmp.GetObjName()}");
+                    Debug.Log($"GameObject: {bestInteractable.name}");
+                    Debug.Log($"Best Score: {bestScore:F4}");
+                    Debug.Log($"Best Hit Point: {bestHitPoint}");
+                }
+                else
+                {
+                    Debug.LogWarning("No best interactable found in Bayesian mode!");
                 }
 
                 return bestInteractable;
@@ -352,18 +357,6 @@ namespace Oculus.Interaction
 
             
         }
-
-        /// <summary>
-        /// Ours: Compute final score based on weights
-        /// </summary>
-        private float ComputeFinalScore(float gestureScore, float posScore, float GestureWeight)
-        {   
-            // if ( posScore < 0.5)
-            // {
-            //     return 0.0f;
-            // }
-            return GestureWeight * gestureScore + (1 - GestureWeight) * posScore;
-            // return (gestureScore * posScore) / (gestureScore + posScore + 1e-6f);
-        }
     }
 }
+
