@@ -10,11 +10,12 @@ public class Session : MonoBehaviour
 
     [Header("Object Generation Settings")]
     public string prefabFolderName = "Prefab_test";
-    public float densityFactor = 1.0f;
-    public Vector3 boxSize = new Vector3(0.3f, 0.3f, 2f);
-    public float heightOffset = 0.0f;
-    public float depth = 2f;
-    public LayerMask objectLayer;
+
+    [Header("Arc Placement Settings")]
+    public float angleStep = 3.0f;           // 弧形区域的角度（度）
+    private float arcRadius = 2.0f;           // 弧形区域的半径
+    private float deltaHeight = 0.002f;          // 弧形区域的高度范围
+    private float deltaRadius = 0.1f;        // 最小距离
 
     [HideInInspector]
     public GameObject[] Objects;
@@ -24,6 +25,7 @@ public class Session : MonoBehaviour
     private GameObject[] Prefabs;
     private int objectCount;
     private System.Random rng = new System.Random();
+    private int[] placementOrder;  // 物体放置顺序数组
 
     /*
      * Experiment Configuration Set here.
@@ -38,15 +40,15 @@ public class Session : MonoBehaviour
      */
     private void OnEnable()
     {
-        expConfigs.Add('O', new ExpConfig(0f, true, 0.15f)); // pure pointing, native method
-        expConfigs.Add('P', new ExpConfig(0f, false, 0.4f)); // pure pointing, head-hand
-        expConfigs.Add('G', new ExpConfig(1f, true, 0.15f)); // pure gesture
-        expConfigs.Add('C', new ExpConfig(0.5f, false, 0.15f)); // combi, pointing head-hand + gesture
+        expConfigs.Add('O', new ExpConfig(0f)); // pure pointing, native method
+        expConfigs.Add('P', new ExpConfig(1f)); // pure pointing, head-hand
+        expConfigs.Add('G', new ExpConfig(2f)); // pure gesture
+        expConfigs.Add('C', new ExpConfig(3f)); // combi, pointing head-hand + gesture
     }
 
-    private void Start()
+     private void Start()
     {
-        LoadBLSMatrix();
+        // LoadBLSMatrix();
         GenerateObjects();
     }
 
@@ -142,59 +144,57 @@ public class Session : MonoBehaviour
     }
 
     /// <summary>
-    /// 实例化并摆放物体
+    /// 实例化并在弧形区域摆放物体
     /// </summary>
     private void InstantiateAndPlaceObjects()
     {
-        Vector3 startPos = transform.position;
-        int attempts = 0;
+        Vector3 startPos = new Vector3(0, 0, 0);
 
+        // All position candidates and then shuffle
+        float arcAngle = objectCount * angleStep;
+        float startAngle = -arcAngle / 2;
+        List<Vector3> arcPositionList = new List<Vector3>();
+        for (int i = 0; i < objectCount; i++)
+        {
+            float currentAngle = startAngle + (i * angleStep);
+            float angleRad = currentAngle * Mathf.Deg2Rad;
+            Vector3 arcPosition = CalculateArcPosition(startPos, currentAngle, angleRad);
+            arcPosition.z += i%2 * deltaRadius;
+            arcPositionList.Add(arcPosition);
+        }
+        FisherYatesShuffle(arcPositionList);
+        
+        
         for (int i = 0; i < objectCount; i++)
         {
             GameObject instance = Instantiate(Prefabs[i % Prefabs.Length]);
             instance.name = Prefabs[i % Prefabs.Length].name;
-            bool placed = false;
-
-            while (!placed && attempts < 100) // Prevent infinite loops
-            {
-                Vector3 randomPos = CalculateRandomPosition(startPos, instance);
-                Collider[] colliders = Physics.OverlapBox(randomPos, instance.transform.localScale / 2, Quaternion.identity, objectLayer);
-
-                if (colliders.Length == 0) // Ensure no overlap
-                {
-                    instance.transform.position = randomPos;
-                    placed = true;
-                }
-                attempts++;
-            }
-
+            instance.transform.position = arcPositionList[i];
+            
             Objects[i] = instance;
             objNames[i] = instance.name;
         }
 
-        Debug.Log($"Placed {objectCount} objects within a box of size {boxSize}.");
+        Debug.Log($"Placed {objectCount} objects in an arc with radius {arcRadius}, angle {arcAngle}°, and height range {deltaHeight}.");
     }
 
     /// <summary>
-    /// 计算随机位置
+    /// 计算弧形区域中的位置
     /// </summary>
-    private Vector3 CalculateRandomPosition(Vector3 startPos, GameObject instance)
+    private Vector3 CalculateArcPosition(Vector3 centerPos, float angleDegrees, float angleRadians)
     {
-        return new Vector3(
-            startPos.x + UnityEngine.Random.Range(-boxSize.x / 2, boxSize.x / 2) * densityFactor,
-            startPos.y + UnityEngine.Random.Range(-boxSize.y / 2, boxSize.y / 2) + heightOffset,
-            startPos.z + UnityEngine.Random.Range(-boxSize.z / 2, boxSize.z / 2) * densityFactor + depth
-        );
+        // 计算X和Z坐标（水平面上的弧形）
+        float x = centerPos.x + arcRadius * angleRadians;
+        float z = centerPos.z + arcRadius;
+        
+        // 计算Y坐标（高度）
+        float deltaY = UnityEngine.Random.Range(0, deltaHeight);
+        float y = centerPos.y + deltaY;
+        
+        return new Vector3(x, y, z);
     }
 
-    /// <summary>
-    /// 检查位置是否有效
-    /// </summary>
-    private bool IsPositionValid(Vector3 position, GameObject instance)
-    {
-        Collider[] colliders = Physics.OverlapBox(position, instance.transform.localScale / 2, Quaternion.identity, objectLayer);
-        return colliders.Length == 0;
-    }
+
 
     /// <summary>
     /// 记录物体信息
@@ -211,7 +211,7 @@ public class Session : MonoBehaviour
     }
 
     /// <summary>
-    /// Fisher-Yates洗牌算法
+    /// Fisher-Yates洗牌算法 - 用于GameObject数组
     /// </summary>
     private void FisherYatesShuffle(GameObject[] array)
     {
@@ -223,6 +223,17 @@ public class Session : MonoBehaviour
             array[j] = temp;
         }
     }
+
+    private void FisherYatesShuffle(List<Vector3> list)
+{
+    for (int i = list.Count - 1; i > 0; i--)
+    {
+        int j = rng.Next(i + 1);
+        Vector3 temp = list[i];
+        list[i] = list[j];
+        list[j] = temp;
+    }
+}
 
     /// <summary>
     /// 获取物体数组
@@ -264,18 +275,12 @@ public class Session : MonoBehaviour
 public class ExpConfig : MonoBehaviour
 {
     // Default method: Unity Original SDK
-    public float Weight = 0f;
-    // Default Occlusion: No Occlusion
-    public bool Occlusion = false;
-    // Default Distance: 0.15f (Camera Distance: 3m)
-    public float AngularDistance = 0.15f;
+    public float MethodID = 0f;
 
 
-    public ExpConfig(float weight, bool occlusion, float dis)
+    public ExpConfig(float methodID)
     {
-        Weight = weight;
-        Occlusion = occlusion;
-        AngularDistance = dis;
+        MethodID = methodID;
     }
 
 }

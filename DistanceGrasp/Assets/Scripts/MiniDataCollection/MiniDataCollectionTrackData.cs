@@ -11,7 +11,7 @@ public class MiniDataCollectionTrackData : MonoBehaviour
 {
     MiniDataUdpSocket socket;
     public TelemetryMessage currentMessage;
-    private long packetId = 0;
+    private int packetId = 0;
     public HandVisual currentHand;
 
     // public GameObject CenterEyeAnchor;

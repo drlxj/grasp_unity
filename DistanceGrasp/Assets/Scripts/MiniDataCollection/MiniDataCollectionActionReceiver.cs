@@ -34,7 +34,7 @@ public class MiniDataCollectionActionReceiver : MonoBehaviour
     MiniDataCollectionTrackData dataManager;
     void Awake()
     {
-        interactor.GestureWeight = gestureWeight;
+        interactor.MethodID = gestureWeight;
         this.interactor.DebugSwitch = DebugSwitch;
     }
 

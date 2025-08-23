@@ -8,6 +8,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.UI;
 using Oculus.Interaction;
 
 [DefaultExecutionOrder(100)]
@@ -17,6 +18,12 @@ public class SimpleTestManager : MonoBehaviour
     public GameObject[] Objects;
     public DistanceHandGrabInteractor interactor;
     public Material glowMaterial;
+    public GameObject progressBarPrefab;
+    public GameObject posProgressBarPrefab;
+    public GameObject gesProgressBarPrefab;
+    private List<Slider> progressBars = new List<Slider>();
+    private List<Slider> posProgressBars = new List<Slider>();
+    private List<Slider> gesProgressBars = new List<Slider>();
     public Material originalMaterial;
     public int timeLimit = 7;
 
@@ -30,32 +37,33 @@ public class SimpleTestManager : MonoBehaviour
     private int SessionTypeIndex = 0;
     private int SessionTypeCount;
     private char SessionType;
-    
-    [Header("Manager References")]
-    [SerializeField] private UIManager uiManager;
+    public GameObject CounterUI;
+    private TextMeshProUGUI CounterText;
+    public GameObject ScoreUI;
+    public GameObject PosScoreUI;
+    public GameObject GesScoreUI;
+    public TextMeshProUGUI ScoreText;
+    public TextMeshProUGUI posScoreText;
+    public TextMeshProUGUI gesScoreText;
     [HideInInspector]
     private int TrialIndex;
     private BlockDataPackage BlockData;
-    private float CurrentDistance;
-    private bool Occlusion;
     private Dictionary<GameObject, (Vector3 position, Quaternion rotation)> initialTransforms = new Dictionary<GameObject, (Vector3, Quaternion)>();
     private int WrongGraspCount;
     private string TargetObjectName;
-    private string start_timestamp;
+    private string SelectedObjectName;
     private System.DateTime GraspingStartTime;
     private System.DateTime GraspingLimitedTime;
     private System.DateTime GraspingEndTime;
-    private List<string> ObjectLogObjectInfo = new List<string>();
-    private Dictionary<char, List<string>> GraspingLogInfo = new Dictionary<char, List<string>>();
-    private Dictionary<char, List<string>> gestureLogAllScores = new Dictionary<char, List<string>>();
-    private bool ObjectLogHasCollected = false;
     public AudioSource audioSource;
     private bool isCountingDown = false;
+    
+    private UserStudyDataRecorder dataRecorder;
+    private int currentPacketId = 0;
 
     private void Awake()
     {
         SessionTypeCount = SessionTypes.Length;
-        start_timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss.fff");
 
         interactor.UserID = UserName;
         interactor.OnSelectTrue += HandleSelectTrue;
@@ -63,96 +71,54 @@ public class SimpleTestManager : MonoBehaviour
         interactor.OnSelectEnd += HandleSelectEnd;
         interactor.OnSelectInterrupt += HandleSelectInterrupt;
 
-        // Auto-find UIManager if not assigned
-        if (uiManager == null)
-        {
-            uiManager = FindObjectOfType<UIManager>();
-            Debug.Log($"Auto-found UIManager: {uiManager != null}");
-        }
-    }
+        CounterText = CounterUI.GetComponentInChildren<TextMeshProUGUI>();
+        ScoreText = ScoreUI.GetComponentInChildren<TextMeshProUGUI>();
+        posScoreText = PosScoreUI.GetComponentInChildren<TextMeshProUGUI>();
+        gesScoreText = GesScoreUI.GetComponentInChildren<TextMeshProUGUI>();
 
-// TODO: the object doesn't return to the original place -> change control scene with less objects
-// TODO: check out-of reach grasping with long distance 
+        dataRecorder = UserStudyDataRecorder.Instance;
+        
+        TrackData.OnTelemetryDataSent += OnTelemetryDataSent;
+    }
+    
+    private void OnTelemetryDataSent(int packetId)
+    {
+        currentPacketId = packetId;
+        Debug.Log($"Received packetId: {packetId}");
+    }
+    
+
     private IEnumerator Start()
     {   
         SessionType = SessionTypes[SessionTypeIndex];
         
-        // Set counting down state and disable interactor
-        isCountingDown = true;
-        interactor.enabled = false;
-        
-        yield return StartCoroutine(uiManager.CountDown(SessionType, () => {
-            // Callback when countdown is complete
-            interactor.enabled = true;
-            isCountingDown = false;
-        }));
+        yield return StartCoroutine(CountDown());
 
         SessionTypeIndex++;
         
         PlayerPrefs.SetString("SessionType", SessionType.ToString());
         PlayerPrefs.Save();
-
-        if (!GraspingLogInfo.ContainsKey(SessionType))
-        {
-            GraspingLogInfo[SessionType] = new List<string>();
-        }
-
-        if (!gestureLogAllScores.ContainsKey(SessionType))
-        {
-            gestureLogAllScores[SessionType] = new List<string>();
-        }
+        SetConfig();
         
-        Objects = FindObjectOfType<Session>().GetObjects();
-
+        Objects = this.GetComponent<TrackData>().Objects;
         foreach (var obj in Objects)
         {
             if (obj == null) continue;
-
             initialTransforms[obj] = (obj.transform.position, obj.transform.rotation);
         }
 
-        SetConfig();
+        Session session = FindObjectOfType<Session>();
+        string prefabFolderName = session.prefabFolderName;
+        float angleStep = session.angleStep;
+        dataRecorder.InitializeExperiment(UserName, SessionType.ToString(), timeLimit, prefabFolderName, angleStep);
+        dataRecorder.RecordObjectInitialization(Objects);
+
+        // 清空之前的 trial 数据，开始新的 session
+        dataRecorder.ClearTrialData();
 
         TrialIndex = 0;
-
         InvokeTest();
     }
-
-    private void tryCollectObjectLog()
-    {
-        if (!ObjectLogHasCollected)
-        {
-            try
-            {
-                TelemetryMessage firstMessage = this.GetComponent<TrackData>().currentMessage;
-                // Debug.Log("objectStates length: " + currentMessage.objectStates.Length);
-                for (int i = 0; i < firstMessage.objectStates.Length; i++)
-                {
-                    ObjectState objectState = firstMessage.objectStates[i];
-                    ObjectType objectType = objectState.objectType;
-                    int objectTypeValue = (int)objectType;
-                    string objectTypeString = objectTypeValue.ToString();
-
-                    Quaternion rotation = objectState.orientation;
-                    string rotationString = $"{rotation.x}|{rotation.y}|{rotation.z}|{rotation.w}";
-
-                    Vector3 position = objectState.position;
-                    string positionString = $"{position.x}|{position.y}|{position.z}";
-
-                    string[] objectInfoData = { objectTypeString, positionString, rotationString };
-                    ObjectLogObjectInfo.Add(string.Join(",", objectInfoData));
-                }
-                Debug.Log("private void tryCollectObjectLog()");
-                ObjectLogHasCollected = true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"An error occurred while processing object states: {ex.Message}");
-            }
-        }
-    }
-
-    
 
     public void ResetObjects()
     {
@@ -180,35 +146,14 @@ public class SimpleTestManager : MonoBehaviour
         Renderer nextRenderer = interactor.TargetObject.transform.Find("default").GetComponent<MeshRenderer>();
         nextRenderer.sharedMaterial = glowMaterial;
     }
-
     void Update()
     {   
         if (isCountingDown)
         {
             return;
         }
-        tryCollectObjectLog();
-        uiManager.CreateOrUpdateProgressBars(interactor.candidateScores);
+        CreateOrUpdateProgressBar();
         checkGraspingTimeLimit();
-        
-        // 简化的远距离交互调试
-        if (Time.frameCount % 600 == 0) // 每10秒输出一次
-        {
-            string status = $"DistanceGrab: Enabled={interactor.enabled}, HasInteractable={interactor.HasInteractable}, Target={(interactor.TargetObject != null ? interactor.TargetObject.name : "null")}";
-            
-            if (!interactor.enabled)
-            {
-                Debug.LogWarning(status + " - Interactor is disabled!");
-            }
-            else if (!interactor.HasInteractable)
-            {
-                Debug.LogWarning(status + " - No interactable detected!");
-            }
-            else
-            {
-                Debug.Log(status + " - Working normally");
-            }
-        }
     }
 
     private void checkGraspingTimeLimit()
@@ -219,86 +164,40 @@ public class SimpleTestManager : MonoBehaviour
         {
             // Time is up, handle the timeout case here
             // 9: Timeout
-            LogGesture(9);
+            dataRecorder.RecordGraspResultWithScores(SelectedObjectName, "timeout", 
+                (float)(DateTime.Now - GraspingStartTime).TotalSeconds, currentPacketId-1);
+            
             interactor.LastObject = interactor.TargetObject;
-            CorrectGrasp();
+
+            CompleteCurrentTrial(false);
             ReHighlight();
             return;
         }
 
-        uiManager.UpdateTimeRemaining(remainingTime.Seconds);
-    }
-
-    private void LogGesture(int correctGestureFlag)
-    {   
-        // correctGestureFlag: 
-        // 1: correct grasp
-        // 0: wrong grasp
-        // 9: timeout
-        string flag = correctGestureFlag.ToString();
-
-        TelemetryMessage currentMessage = this.GetComponent<TrackData>().currentMessage;
-
-        Quaternion rootRotation = currentMessage.rootRotation;
-        Vector3 rootPosition = currentMessage.rootPosition;
-        Vector3[] jointPositions = currentMessage.jointPositions;
-  
-        List<string> jointStrings = new List<string>();
-
-        string rootRotationInfo = $"{rootRotation.x}|{rootRotation.y}|{rootRotation.z}|{rootRotation.w}";
-        string rootPositionInfo = $"{rootPosition.x}|{rootPosition.y}|{rootPosition.z}";
-
-        foreach (var joint in jointPositions)
-        {
-            string jointInfo = $"{joint.x}|{joint.y}|{joint.z}";
-            jointStrings.Add(jointInfo);
-        }
-
-        string allJoints = string.Join("/", jointStrings);
-
-        List<string> scoreList = new List<string>();
-
-        foreach (var scoreEntry in interactor.candidateScores.Skip(1))
-        {
-            var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-
-            if (parts.Length >= 5)
-            {
-                string name = parts[0];
-                float gestureScoreCandidateScores = float.Parse(parts[1]);
-                float posScoreCandidateScores = float.Parse(parts[2]);
-                float gestureWeightCandidateScores = float.Parse(parts[3]);
-                float finalScoreCandidateScores = float.Parse(parts[4]);
-                string scoreEntryString = $"{name}|{gestureScoreCandidateScores}|{posScoreCandidateScores}|{gestureWeightCandidateScores}|{finalScoreCandidateScores}";
-                scoreList.Add(scoreEntryString);
-            }
-        }
-        string allScores = string.Join("/", scoreList);
-        string combinedInfo = $"{flag},{TargetObjectName},{rootRotationInfo},{rootPositionInfo},{allJoints},{allScores}";
-        gestureLogAllScores[SessionType].Add(combinedInfo);
+        CounterText.text = $"Time Left: {remainingTime.Seconds}s";
     }
 
     public void HandleSelectTrue(object sender, EventArgs e)
     {   
-        LogGesture(1);
         // correctGestureFlag: 
         // 1: correct grasp
-        CorrectGrasp();
+        dataRecorder.RecordGraspResultWithScores(SelectedObjectName, "success", 
+            (float)(DateTime.Now - GraspingStartTime).TotalSeconds, currentPacketId-1);
+        CompleteCurrentTrial(true);
     }
 
     public void HandleSelectFalse(object sender, EventArgs e)
     {   
-        LogGesture(0);
         // correctGestureFlag: 
         // 0: wrong grasp
+        dataRecorder.RecordGraspResultWithScores(SelectedObjectName, "wrong_object", 
+            (float)(DateTime.Now - GraspingStartTime).TotalSeconds, currentPacketId-1);
         WrongGrasp();
     }
 
     public void HandleSelectEnd(object sender, EventArgs e)
     {   
         ResetObjects();
-
         ReHighlight();
     }
 
@@ -310,154 +209,7 @@ public class SimpleTestManager : MonoBehaviour
     public void SetConfig()
     {
         ExpConfig config = Session.GetExpConfig(SessionType);
-        CurrentDistance = config.AngularDistance;
-        Occlusion = config.Occlusion;
-        interactor.GestureWeight = config.Weight;
-    }
-    
-    /// <summary>
-    /// 快速检查物体配置
-    /// </summary>
-    [ContextMenu("Quick Check Object Setup")]
-    public void QuickCheckObjectSetup()
-    {
-        if (Objects == null || Objects.Length == 0)
-        {
-            Debug.LogError("Objects array is null or empty!");
-            return;
-        }
-        
-        int missingComponents = 0;
-        for (int i = 0; i < Objects.Length; i++)
-        {
-            if (Objects[i] == null) continue;
-            
-            var obj = Objects[i];
-            var interactable = obj.GetComponent<DistanceHandGrabInteractable>();
-            var rigidbody = obj.GetComponent<Rigidbody>();
-            var collider = obj.GetComponent<Collider>();
-            
-            if (interactable == null || rigidbody == null || collider == null)
-            {
-                missingComponents++;
-                Debug.LogWarning($"Object {i} ({obj.name}): Missing components - Interactable:{interactable != null}, Rigidbody:{rigidbody != null}, Collider:{collider != null}");
-            }
-        }
-        
-        if (missingComponents == 0)
-        {
-            Debug.Log($"All {Objects.Length} objects have required components ✓");
-        }
-        else
-        {
-            Debug.LogWarning($"{missingComponents} objects missing required components");
-        }
-    }
-    
-    /// <summary>
-    /// 检查Detection Frustums配置
-    /// </summary>
-    [ContextMenu("Check Detection Frustums")]
-    public void CheckDetectionFrustums()
-    {
-        if (interactor == null)
-        {
-            Debug.LogError("Interactor is null!");
-            return;
-        }
-        
-        // 通过反射获取Detection Frustums
-        var interactorType = interactor.GetType();
-        var detectionFrustumsField = interactorType.GetField("_distantCandidateComputer", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        
-        if (detectionFrustumsField != null)
-        {
-            var distantCandidateComputer = detectionFrustumsField.GetValue(interactor);
-            if (distantCandidateComputer != null)
-            {
-                var computerType = distantCandidateComputer.GetType();
-                var frustumsField = computerType.GetField("_detectionFrustums", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    
-                if (frustumsField != null)
-                {
-                    var frustums = frustumsField.GetValue(distantCandidateComputer);
-                    if (frustums != null)
-                    {
-                        Debug.Log("Detection Frustums: ✓ Configured");
-                    }
-                    else
-                    {
-                        Debug.LogError("Detection Frustums: ✗ Not configured - This is likely the main issue!");
-                    }
-                }
-            }
-        }
-    }
-    
-    /// <summary>
-    /// 强制启用交互器（用于测试）
-    /// </summary>
-    [ContextMenu("Force Enable Interactor")]
-    public void ForceEnableInteractor()
-    {
-        interactor.enabled = true;
-        isCountingDown = false;
-        Debug.Log("Force enabled interactor and disabled counting down");
-    }
-    
-    /// <summary>
-    /// 修复目标物体的组件配置
-    /// </summary>
-    [ContextMenu("Fix Target Object Components")]
-    public void FixTargetObjectComponents()
-    {
-        if (interactor.TargetObject == null)
-        {
-            Debug.LogError("Target object is null!");
-            return;
-        }
-        
-        GameObject targetObj = interactor.TargetObject;
-        var interactable = targetObj.GetComponent<DistanceHandGrabInteractable>();
-        var rigidbody = targetObj.GetComponent<Rigidbody>();
-        var collider = targetObj.GetComponent<Collider>();
-        
-        bool needsFix = false;
-        
-        if (interactable == null)
-        {
-            interactable = targetObj.AddComponent<DistanceHandGrabInteractable>();
-            needsFix = true;
-        }
-        
-        if (rigidbody == null)
-        {
-            rigidbody = targetObj.AddComponent<Rigidbody>();
-            rigidbody.isKinematic = true;
-            needsFix = true;
-        }
-        
-        if (collider == null)
-        {
-            collider = targetObj.AddComponent<BoxCollider>();
-            needsFix = true;
-        }
-        
-        if (interactable != null)
-        {
-            interactor.Target = interactable;
-        }
-        
-        if (needsFix)
-        {
-            Debug.Log($"Fixed components for {targetObj.name}");
-        }
-        else
-        {
-            Debug.Log($"{targetObj.name} already has all required components");
-        }
+        interactor.MethodID = config.MethodID;
     }
    
     public void InvokeTest()
@@ -474,83 +226,49 @@ public class SimpleTestManager : MonoBehaviour
         GraspingStartTime = System.DateTime.Now;
         GraspingLimitedTime = GraspingStartTime.AddSeconds(timeLimit);
 
-        // 检查并确保目标物体有必要的组件
         DistanceHandGrabInteractable target = currentObject.GetComponentInChildren<DistanceHandGrabInteractable>();
-        
-        if (target == null)
-        {
-            target = currentObject.AddComponent<DistanceHandGrabInteractable>();
-        }
-
-        // 检查Rigidbody
-        var rigidbody = currentObject.GetComponent<Rigidbody>();
-        if (rigidbody == null)
-        {
-            rigidbody = currentObject.AddComponent<Rigidbody>();
-            rigidbody.isKinematic = true;
-        }
-
-        // 检查Collider
-        var collider = currentObject.GetComponent<Collider>();
-        if (collider == null)
-        {
-            collider = currentObject.AddComponent<BoxCollider>();
-        }
 
         target.ObjID = TrialIndex + 1;
 
         interactor.TargetObject = target.GetGameObject();
         interactor.Target = target;
-
         interactor.ResetPerformance();
+        dataRecorder.StartNewTrial(TrialIndex, TargetObjectName);
+
+        Debug.Log($"UpdateTarget: {TargetObjectName}");
     }
     
-    
 
-    public void CorrectGrasp()
+
+    public void CompleteCurrentTrial(bool isSuccessful)
     {
-        
+
+        dataRecorder.CompleteTrial(isSuccessful, WrongGraspCount, (float)(DateTime.Now - GraspingStartTime).TotalSeconds);
+
         if (audioSource != null)
         {
             audioSource.Play();
         }
 
-        System.DateTime GraspingEndTime = System.DateTime.Now;
-
-        var data = new string[] {
-            TargetObjectName,
-            WrongGraspCount.ToString(),
-            GraspingStartTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-            GraspingEndTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-        };
-
-        GraspingLogInfo[SessionType].Add(string.Join(",", data));
-
         TrialIndex++;
         if (TrialIndex >= Objects.Length)
-        {   
+        {
             if (SessionTypeIndex >= SessionTypeCount)
-            {   
-                // If all sessions are finished, save the logs to CSV files and quit the application
-                createFolderIfNotExists($"../user_study_data/{start_timestamp}/");
-                createFolderIfNotExists($"../user_study_data/{start_timestamp}/meta_data/");
-                createSessionTypeFolderIfNotExists(SessionTypes);
-                writeObjectLog();
-                // writeRotationSeqLog();
-                writeGestureLog();
-                WriteGraspingLog();
+            {
+                // If all sessions are finished, quit the application
                 Quit();
             }
             else
             {
+                // 当前session结束，保存数据
+                dataRecorder.SaveDataToFiles();
+                
                 // If all trials are finished, count down and move to the next session type
                 StartCoroutine(Start());
                 return;
             }
-            
         }
         UpdateTarget();
-        
     }
 
     public void WrongGrasp()
@@ -558,88 +276,220 @@ public class SimpleTestManager : MonoBehaviour
         WrongGraspCount++;
     }
 
-    private void createFolderIfNotExists(string folderPath)
-    {
-        if (!Directory.Exists(folderPath))
-        {
-            Directory.CreateDirectory(folderPath);
-        }
-    }
-
-    private void createSessionTypeFolderIfNotExists(string sessionType)
-    {
-        for (int i = 0; i < SessionTypeCount; i++)
-        {
-            string sessionTypeFolderPath = $"../user_study_data/{start_timestamp}/{sessionType[i]}/";
-            if (!Directory.Exists(sessionTypeFolderPath))
-            {
-                Directory.CreateDirectory(sessionTypeFolderPath);
-            }
-        }
-    }
-
-    private void writeObjectLog()
-    {
-        string objectInfoLogPath = $"../user_study_data/{start_timestamp}/meta_data/ObjectData.csv";
-        using (StreamWriter writer = new StreamWriter(objectInfoLogPath, true))
-        {
-            foreach (var line in ObjectLogObjectInfo)
-            {
-                writer.WriteLine(line); 
-            }
-        }
-    }
-    // private void writeRotationSeqLog()
-    // {
-    //     List<Tuple<string, string>> RotationSeqNameObjectList = new List<Tuple<string, string>>();
-
-    //     RotationSeqNameObjectList = this.GetComponent<ObjectTransformAssignment>().RotationSeqNameObjectList;
-    //     string RotationSeqLogPath = $"../user_study_data/{start_timestamp}/meta_data/RotationSeqData.csv";
-    //     using (StreamWriter writer = new StreamWriter(RotationSeqLogPath, true))
-    //     {
-    //         foreach (var line in RotationSeqNameObjectList)
-    //         {
-    //             writer.WriteLine($"{line.Item1},{line.Item2}"); 
-    //         }
-    //     }
-    // }
-
-    private void writeGestureLog()
+    private IEnumerator CountDown()
     {   
-        foreach (var entry in gestureLogAllScores)
+        isCountingDown = true; 
+        // char nextSessionType = SessionTypes[SessionTypeIndex];
+        interactor.enabled = false;
+
+        for (int i = 6; i > 0; i--)
         {
-            string GestureLogPath = $"../user_study_data/{start_timestamp}/{entry.Key}/GestureData.csv";
-            using (StreamWriter writer = new StreamWriter(GestureLogPath, true))
-            {
-                foreach (var line in entry.Value)
-                {
-                    writer.WriteLine(line); 
-                }
-            }
+            CounterText.text = $"Next Session: {SessionType}\nStarting in {i}...";
+            CounterText.color = Color.yellow; 
+            yield return new WaitForSeconds(1);
         }
+
+        CounterText.text = "Go!";
+        CounterText.color = Color.red;
+        yield return new WaitForSeconds(1); 
+
+        CounterText.text = "";
+
+        interactor.enabled = true;
+        CounterText.color = Color.white;
+        isCountingDown = false;
     }
 
-    private void  WriteGraspingLog()
+    private void CreateOrUpdateProgressBar()
     {
-        foreach (var entry in GraspingLogInfo)
-        {
-            string GraspingLogPath = $"../user_study_data/{start_timestamp}/{entry.Key}/GraspingData.csv";
-            using (StreamWriter writer = new StreamWriter(GraspingLogPath, true))
+        if (!progressBars.Any())
+        {   
+            // 解析分数并保存到 UserStudyDataRecorder
+            Dictionary<string, float> gestureScores = new Dictionary<string, float>();
+            Dictionary<string, float> positionScores = new Dictionary<string, float>();
+            Dictionary<string, float> finalScores = new Dictionary<string, float>();
+            
+            foreach (var scoreEntry in interactor.candidateScores.Skip(1))
             {
-                foreach (var line in entry.Value)
-                {
-                    writer.WriteLine(line); 
+                var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length >= 6)  // 现在有6列：PacketID, Name, Gesture, Pos, Weight, Final
+                {   
+                    // final score bars
+                    string name = parts[1];  // 第1列是Name（跳过第0列PacketID）
+                    
+                    float finalScoreCandidateScores = float.Parse(parts[5]);  // 第5列是Final
+
+                    GameObject sliderObject = Instantiate(progressBarPrefab, ScoreText.transform);
+                    Slider progressBar = sliderObject.GetComponent<Slider>();
+
+                    progressBar.minValue = 0.0f;
+                    progressBar.maxValue = 1.0f;
+                    progressBar.value = finalScoreCandidateScores;
+
+                    GameObject scoreTextObject = new GameObject("ScoreText", typeof(TextMeshProUGUI));
+                    scoreTextObject.transform.SetParent(sliderObject.transform, false);
+                    TextMeshProUGUI scoreText = scoreTextObject.GetComponent<TextMeshProUGUI>();
+                    scoreText.text = $"{name}: {finalScoreCandidateScores:F2}";
+
+                    // \nG: {gestureScoreCandidateScores}, P: {posScoreCandidateScores}
+
+                    scoreText.fontSize = 7;
+                    scoreText.color = new Color32(139, 0, 0, 255);
+                    scoreText.alignment = TextAlignmentOptions.Center;
+                    RectTransform scoreTextRectTransform = scoreTextObject.GetComponent<RectTransform>();
+                    scoreTextRectTransform.anchoredPosition = new Vector2(0, 8);
+                    scoreTextRectTransform.sizeDelta = new Vector2(100, 20);
+
+                    progressBars.Add(progressBar);
+
+                    // gesture score bars
+                    float gestureScoreCandidateScores = float.Parse(parts[2]);  // 第2列是Gesture
+
+                    GameObject gesSliderObject = Instantiate(gesProgressBarPrefab, gesScoreText.transform);
+                    Slider gesProgressBar = gesSliderObject.GetComponent<Slider>();
+
+                    gesProgressBar.minValue = 0.0f;
+                    gesProgressBar.maxValue = 1.0f;
+                    gesProgressBar.value = gestureScoreCandidateScores;
+
+                    GameObject scoreTextObjectGes = new GameObject("ScoreText", typeof(TextMeshProUGUI));
+                    scoreTextObjectGes.transform.SetParent(gesSliderObject.transform, false);
+                    TextMeshProUGUI scoreTextGes = scoreTextObjectGes.GetComponent<TextMeshProUGUI>();
+                    scoreTextGes.text = $"{name}: {gestureScoreCandidateScores:F2}";
+
+                    scoreTextGes.fontSize = 7;
+                    scoreTextGes.color = new Color32(0, 0, 139, 255);
+                    scoreTextGes.alignment = TextAlignmentOptions.Center;
+                    RectTransform scoreTextRectTransformGes = scoreTextObjectGes.GetComponent<RectTransform>();
+                    scoreTextRectTransformGes.anchoredPosition = new Vector2(0, 8);
+                    scoreTextRectTransformGes.sizeDelta = new Vector2(100, 20);
+
+                    gesProgressBars.Add(gesProgressBar);
+
+                    // position score bars
+                    float posScoreCandidateScores = float.Parse(parts[3]);  // 第3列是Pos
+
+                    GameObject posSliderObject = Instantiate(posProgressBarPrefab, posScoreText.transform);
+                    Slider posProgressBar = posSliderObject.GetComponent<Slider>();
+
+                    posProgressBar.minValue = 0.0f;
+                    posProgressBar.maxValue = 1.0f;
+                    posProgressBar.value = posScoreCandidateScores;
+
+                    GameObject scoreTextObjectPos= new GameObject("ScoreText", typeof(TextMeshProUGUI));
+                    scoreTextObjectPos.transform.SetParent(posSliderObject.transform, false);
+                    TextMeshProUGUI scoreTextPos = scoreTextObjectPos.GetComponent<TextMeshProUGUI>();
+                    scoreTextPos.text = $"{name}: {posScoreCandidateScores:F2}";
+
+                    scoreTextPos.fontSize = 7;
+                    scoreTextPos.color = new Color32(0, 139, 0, 255);
+                    scoreTextPos.alignment = TextAlignmentOptions.Center;
+                    RectTransform scoreTextRectTransformPos = scoreTextObjectPos.GetComponent<RectTransform>();
+                    scoreTextRectTransformPos.anchoredPosition = new Vector2(0, 8);
+                    scoreTextRectTransformPos.sizeDelta = new Vector2(100, 20);
+
+                    posProgressBars.Add(posProgressBar);
+                    
+                    // 保存分数到字典中
+                    gestureScores[name] = gestureScoreCandidateScores;
+                    positionScores[name] = posScoreCandidateScores;
+                    finalScores[name] = finalScoreCandidateScores;
+
                 }
+            }
+            
+            // 保存分数到 UserStudyDataRecorder
+            if (dataRecorder != null && currentPacketId > 0)
+            {
+                dataRecorder.CacheScoreData(currentPacketId, gestureScores, positionScores, finalScores);
+                Debug.Log($"Saved scores to UserStudyDataRecorder for packetId: {currentPacketId}");
+            }
+        }
+        else 
+        {
+            // 更新现有进度条并保存分数
+            int index = 0;
+            Dictionary<string, float> gestureScores = new Dictionary<string, float>();
+            Dictionary<string, float> positionScores = new Dictionary<string, float>();
+            Dictionary<string, float> finalScores = new Dictionary<string, float>();
+
+            foreach (var scoreEntry in interactor.candidateScores.Skip(1))
+            {
+                var parts = scoreEntry.Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length >= 6)  // 现在有6列：PacketID, Name, Gesture, Pos, Weight, Final
+                {
+                    string name = parts[1];  // 第1列是Name（跳过第0列PacketID）
+                    
+                    float finalScoreCandidateScores = float.Parse(parts[5]);  // 第5列是Final
+                    Slider progressBar = progressBars[index];
+                    progressBar.value = finalScoreCandidateScores;
+
+                    Transform scoreTextObject = progressBar.transform.Find("ScoreText");
+                    if (scoreTextObject != null)
+                    {
+                        TextMeshProUGUI scoreText = scoreTextObject.GetComponent<TextMeshProUGUI>();
+                        scoreText.text = $"{name}: {finalScoreCandidateScores:F2}";
+                    }
+
+                    float gestureScoreCandidateScores = float.Parse(parts[2]);  // 第2列是Gesture
+                    Slider gesProgressBar = gesProgressBars[index];
+                    gesProgressBar.value = gestureScoreCandidateScores;
+
+                    Transform scoreTextObjectGes = gesProgressBar.transform.Find("ScoreText");
+                    if (scoreTextObjectGes != null)
+                    {
+                        TextMeshProUGUI scoreTextGes = scoreTextObjectGes.GetComponent<TextMeshProUGUI>();
+                        scoreTextGes.text = $"{name}: {gestureScoreCandidateScores:F2}";
+                    }
+
+                    float posScoreCandidateScores = float.Parse(parts[3]);  // 第3列是Pos
+                    Slider posProgressBar = posProgressBars[index];
+                    posProgressBar.value = posScoreCandidateScores;
+
+                    Transform scoreTextObjectPos = posProgressBar.transform.Find("ScoreText");
+                    if (scoreTextObjectPos != null)
+                    {
+                        TextMeshProUGUI scoreTextPos = scoreTextObjectPos.GetComponent<TextMeshProUGUI>();
+                        scoreTextPos.text = $"{name}: {posScoreCandidateScores:F2}";
+                    }
+
+                    // 保存分数到字典中
+                    gestureScores[name] = gestureScoreCandidateScores;
+                    positionScores[name] = posScoreCandidateScores;
+                    finalScores[name] = finalScoreCandidateScores;
+
+                    index++;
+                }
+            }
+            
+            // 保存分数到 UserStudyDataRecorder
+            if (dataRecorder != null && currentPacketId > 0)
+            {
+                dataRecorder.CacheScoreData(currentPacketId, gestureScores, positionScores, finalScores);
+                Debug.Log($"Updated scores in UserStudyDataRecorder for packetId: {currentPacketId}");
             }
         }
     }
 
+    
 
 
-
-
+    private void OnDestroy()
+    {
+        // 取消订阅事件
+        TrackData.OnTelemetryDataSent -= OnTelemetryDataSent;
+    }
+    
     public static void Quit()
     {   
+        // 保存实验数据
+        if (UserStudyDataRecorder.Instance != null)
+        {
+            UserStudyDataRecorder.Instance.SaveDataToFiles();
+        }
+        
         #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
         #else

@@ -1,6 +1,7 @@
 using Oculus.Interaction.HandGrab;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class ActionReceiver : MonoBehaviour
@@ -10,12 +11,6 @@ public class ActionReceiver : MonoBehaviour
     public DistanceHandGrabInteractor interactor;
     [Tooltip("The weight to decide the ratio of shape and position factors taken into consideration." +
         "\n1 means shape only and 0 means position only.")]
-    [Range (0f, 1f)]
-    public float gestureWeight = 0.5f;
-    [Tooltip("This value serves as a shape matching threshold, " +
-        "with values above the threshold indicating a successful match.")]
-    [Range(0f, 1f)]
-    public float confidenceThreshold = 0.8f;
     public bool DebugSwitch;
     private static CommandMessage latestMsg = null;
 
@@ -34,7 +29,6 @@ public class ActionReceiver : MonoBehaviour
     TrackData dataManager;
     void Awake()
     {
-        interactor.GestureWeight = gestureWeight;
         this.interactor.DebugSwitch = DebugSwitch;
     }
 
@@ -63,8 +57,6 @@ public class ActionReceiver : MonoBehaviour
     {
         latestMsg = new CommandMessage(data);
 
-        float maxScore = float.NegativeInfinity;
-        int maxIdx = -1;
 
         Dictionary<string, float> gestureProbabilities = new();
         Dictionary<string, Vector3> relativePositions = new();
@@ -72,37 +64,25 @@ public class ActionReceiver : MonoBehaviour
 
         for (int i = 0; i< latestMsg.objectCount; i++)
         {
-            // string objectName = dataManager.objNames[i];
-            float confidence = latestMsg.confidenceScore[i];
+            float gestureScore = latestMsg.confidenceScore[i];
+            Vector3 position = latestMsg.objectPositions[i];
             int objTypesID = latestMsg.objTypesID[i];
             ObjectType objType = (ObjectType)objTypesID;
             string objectName = GetEnumName(objType);
             objectName = objectName.ToLower();
 
-            Vector3 position = latestMsg.objectPositions[i];
-
-            gestureProbabilities[objectName] = confidence;
+            gestureProbabilities[objectName] = gestureScore;
             relativePositions[objectName] = position;
-
-            if (confidence > maxScore && confidence > confidenceThreshold){
-                maxIdx = i;
-                maxScore = confidence;
-            }
         }
-        if (maxIdx < 0)
+        if (latestMsg.objectCount != dataManager.Objects.Length)
         {
-            interactor.IsGestureProbability = false; 
-            interactor.GestureProbabilityList = new Dictionary<string, float>();
-            interactor.RelativePosList = new Dictionary<string, Vector3>();
-            Debug.Log("No max score found now.");
-        }  
-        if (maxIdx >= dataManager.Objects.Length)
-        {
-            Debug.LogError("Index out of bounds in object detection.");
+            Debug.LogError($"Object count mismatch: latestMsg.objectCount={latestMsg.objectCount}, dataManager.Objects.Length={dataManager.Objects.Length}.");
             return;
         }
         interactor.GestureProbabilityList = gestureProbabilities;
-        interactor.RelativePosList = relativePositions;        
+        interactor.RelativePosList = relativePositions;
+        interactor.CurrentPacketId = (int)latestMsg.packetIdx;  // 设置当前packetId
+              
     }
 
 }

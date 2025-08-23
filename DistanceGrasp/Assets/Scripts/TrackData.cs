@@ -3,8 +3,7 @@ using System.IO;
 using Oculus.Interaction;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UIElements;
-using System.Linq;
+using Newtonsoft.Json;
 
 [DefaultExecutionOrder(50)]
 public class TrackData : MonoBehaviour
@@ -23,9 +22,12 @@ public class TrackData : MonoBehaviour
     private static int objCount = 0;
     private Vector3 rootPosition;
 
-    private long packetId = 0;
+    private int packetId = 0;
     
     public TelemetryMessage currentMessage;
+    
+    // 事件：当发送数据包时通知
+    public static event System.Action<int> OnTelemetryDataSent;
 
     private void Awake()
     {
@@ -153,11 +155,17 @@ public class TrackData : MonoBehaviour
             message.jointPositions[i] = relativePosGlobal;
         }
 
-        // Debug.Log($"message: {message}, root: {root}");
-
         message.objectStates = AddObjectsToTelemetryMessage(root, out string objInfo);
-        // LogObjData(objInfo);
-
+        
+        // 缓存手势数据
+        if (UserStudyDataRecorder.Instance != null)
+        {
+            UserStudyDataRecorder.Instance.CacheGestureData((int)message.packetIdx, message);
+        }
+        
+        // 通知SimpleTestManager更新packetId
+        OnTelemetryDataSent?.Invoke((int)message.packetIdx);
+        
         socket.SendData(message.ToBytes());
     }
 
@@ -226,17 +234,9 @@ public class TrackData : MonoBehaviour
     {
         objInfo = string.Empty;
 
-        if (Objects == null || Objects.Length == 0)
-        {
-            Debug.LogWarning("Objects array is null or empty in AddObjectsToTelemetryMessage");
-            return new ObjectState[0];
-        }
-
         ObjectState[] objStates = new ObjectState[Objects.Length];
         for (int i = 0; i < objStates.Length; i++)
         {
-            if (Objects[i] == null) continue;
-            
             objStates[i] = new ObjectState();
 
             Vector3 relativePosGlobal = Objects[i].transform.position - root.position;
