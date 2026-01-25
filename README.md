@@ -1,4 +1,4 @@
-# Grasping Unity Project
+# Point & Grasp: Flexible Selection of Out-of-Reach Objects Through Probabilistic Cue Integration
 
 This project is designed to help users, even those with no prior experience, get started with using this Unity-based project. Follow the steps below to set up your environment and run the project.
 
