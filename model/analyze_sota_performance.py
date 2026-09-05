@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/https://accounts.google.com/SignOutOptions?hl=en&continue=https://docs.google.com/presentation/d/1_KrTyE3WFBsdZuhLSb1fuYhy1XPtLvz5vAz4n0i_Rzs/edit%3Fslide%3Did.g3a2d7d9a16e_0_0&ec=GBRAmQIenv python3
 # -*- coding: utf-8 -*-
 """
-Analyze average graspingDuration and standard deviation for OPCG methods
+Analyze average graspingDuration and standard deviation for SOTA methods (A: BubbleRay, E: Expand, C: Point & Grasp)
 """
 
 import json
@@ -18,30 +18,31 @@ import seaborn as sns
 
 # 数据目录路径列表
 DATA_DIRECTORIES = [
-    # r"C:\Users\Researcher\grasping-unity\user_study_data\test3",
+
     r"C:\Users\Researcher\grasping-unity\user_study_data\new1",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\2",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\3",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\4",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\5",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\6",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\7",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\8",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\9",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\10",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\11",
-    r"C:\Users\Researcher\grasping-unity\user_study_data\12",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new2",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new3",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new4_Copy",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new5",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new6_Copy",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new7",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new8",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new9",
+
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new10",
+
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new11_Copy",
+    r"C:\Users\Researcher\grasping-unity\user_study_data\new12_Copy",
 ]
 
-# 要分析的OPCG方法     
-OPCG_METHODS = ['P', 'G', 'C']  # 可选: ['O', 'P', 'C', 'G'] 或任何子集
-# OPCG_METHODS = ['A', 'G', 'C']  # 可选: ['O', 'P', 'C', 'G'] 或任何子集
+# 要分析的SOTA方法     
+OPCG_METHODS = ['A', 'E', 'C']  # A: BubbleRay, E: Expand, C: Point & Grasp
 
 # 方法描述
 METHOD_DESCRIPTIONS = {
-    'P': '',
-    'G': '', 
-    'C': '',
+    'A': 'BubbleRay',
+    'E': 'Expand', 
+    'C': 'Point & Grasp',
 }
 
 # 歧义条件分类
@@ -60,8 +61,8 @@ CONDITION_TITLES = {
     'low_spatial_low_semantic': 'Low Spatial + Low Semantic'
 }
 
-# 方法颜色方案
-METHOD_COLORS = {'P': '#ff7f0e', 'G': '#1f77b4', 'C': '#2ca02c', 'E': '#d62728'}
+# 方法颜色方案 - 使用协调的三色调色板（与绿色形成互补平衡，色盲友好）
+METHOD_COLORS = {'A': '#A72703', 'E': '#FCB53B', 'C': '#2ca02c'}  # A: 深紫色, E: 粉红色, C: 绿色
 
 # =============================================================================
 
@@ -170,7 +171,7 @@ def classify_ambiguity_conditions(folder_name):
         return None
 
 def analyze_opcg_methods_by_ambiguity(data_directories):
-    """Analyze data for OPCG methods by ambiguity conditions from multiple directories"""
+    """Analyze data for SOTA methods by ambiguity conditions from multiple directories"""
     if isinstance(data_directories, str):
         data_directories = [data_directories]
     
@@ -336,7 +337,7 @@ def calculate_statistics_by_ambiguity(method_data_by_ambiguity):
 def print_statistics_by_ambiguity(stats_by_ambiguity):
     """Print statistics results by ambiguity condition"""
     print("\n" + "="*60)
-    print("OPCG METHODS PERFORMANCE ANALYSIS BY AMBIGUITY CONDITIONS")
+    print("SOTA METHODS PERFORMANCE ANALYSIS BY AMBIGUITY CONDITIONS")
     print("="*60)
     
     for condition, stats in stats_by_ambiguity.items():
@@ -431,7 +432,7 @@ def save_method_data_to_csv(method_data_by_ambiguity, output_dir="outputs"):
                 detailed_data.append(row)
     
     detailed_df = pd.DataFrame(detailed_data)
-    detailed_file = output_dir / "method_data_detailed.csv"
+    detailed_file = output_dir / "method_data_detailed_sota.csv"
     detailed_df.to_csv(detailed_file, index=False)
     print(f"Saved detailed data: {detailed_file}")
     
@@ -527,9 +528,8 @@ def plot_methods_comparison_by_ambiguity(stats_by_ambiguity):
         ax_left.set_xlabel('Method', fontsize=14, fontweight='bold')
         ax_left.set_ylabel(ylabel, fontsize=14, fontweight='bold')
         ax_left.set_xticks(range(len(methods)))
-        # Create labels with 'P' changed to 'D'
         # 定义方法标签映射（与图例保持一致）
-        method_label_map = {'C': 'Point & Grasp', 'P': 'Point', 'G': 'Grasp'}
+        method_label_map = {'A': 'BubbleRay', 'E': 'Expand', 'C': 'Point & Grasp'}
         method_labels = [method_label_map.get(method, method) for method in methods]
         ax_left.set_xticklabels(method_labels, fontsize=12, rotation=0)
         ax_left.grid(True, alpha=0.3)
@@ -604,8 +604,8 @@ def plot_methods_comparison_by_ambiguity(stats_by_ambiguity):
                     else:  # Low Spatial  
                         base_x = 2.6 if semantic_ambiguity == 'High' else 3.4  # High Semantic=2.6, Low Semantic=3.4
                     
-                    # Add offset for method grouping (P, G, C) - make bars touch each other
-                    method_offset = {'P': -width, 'G': 0, 'C': width}.get(method, 0)
+                    # Add offset for method grouping (A, E, C) - make bars touch each other
+                    method_offset = {'A': -width, 'E': 0, 'C': width}.get(method, 0)
                     adjusted_x = base_x + method_offset
                     
                     # Create bar in our subplot (in front of background)
@@ -673,7 +673,7 @@ def plot_methods_comparison_by_ambiguity(stats_by_ambiguity):
         
         # Add shared legend outside the plot area, closer to the right plot
         # 定义方法标签映射
-        method_labels = {'C': 'Point & Grasp', 'P': 'Point', 'G': 'Grasp'}
+        method_labels = {'A': 'BubbleRay', 'E': 'Expand', 'C': 'Point & Grasp'}
         legend_elements = [plt.Rectangle((0,0),1,1, facecolor=METHOD_COLORS[m], alpha=0.8, 
                                label=method_labels.get(m, m)) 
                           for m in OPCG_METHODS]
@@ -684,7 +684,176 @@ def plot_methods_comparison_by_ambiguity(stats_by_ambiguity):
         plt.close(g.fig)
         
         # Save and show each individual plot
-        filename = f"opcg_methods_interaction_effects_{metric}.png"
+        filename = f"sota_interaction_effects_{metric}.png"
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Saved: {filename}")
+        plt.show()
+
+def calculate_spatial_only_statistics(method_data_by_ambiguity):
+    """Calculate statistics grouped only by spatial ambiguity (merging semantic conditions)"""
+    spatial_only_data = {
+        'high_spatial': {method: {'durations': [], 'grasp_counts': [], 'is_successful': [], 
+            'hand_movement_distances': [], 'subject_id': []} for method in OPCG_METHODS},
+        'low_spatial': {method: {'durations': [], 'grasp_counts': [], 'is_successful': [], 
+            'hand_movement_distances': [], 'subject_id': []} for method in OPCG_METHODS}
+    }
+    
+    # Merge data by spatial ambiguity
+    for condition, method_data in method_data_by_ambiguity.items():
+        if condition == 'overall':
+            continue
+            
+        spatial = 'high_spatial' if 'high_spatial' in condition else 'low_spatial'
+        
+        for method in OPCG_METHODS:
+            if method in method_data:
+                spatial_only_data[spatial][method]['durations'].extend(method_data[method]['durations'])
+                spatial_only_data[spatial][method]['grasp_counts'].extend(method_data[method]['grasp_counts'])
+                spatial_only_data[spatial][method]['is_successful'].extend(method_data[method]['is_successful'])
+                spatial_only_data[spatial][method]['hand_movement_distances'].extend(method_data[method]['hand_movement_distances'])
+                spatial_only_data[spatial][method]['subject_id'].extend(method_data[method]['subject_id'])
+    
+    # Calculate statistics for each spatial condition
+    spatial_stats = {}
+    for spatial_condition, method_data in spatial_only_data.items():
+        stats = {}
+        
+        for method, data in method_data.items():
+            durations = data['durations']
+            grasp_counts = data['grasp_counts']
+            is_successful = data['is_successful']
+            hand_movement_distances = data['hand_movement_distances']
+            subject_ids = data['subject_id']
+            
+            if not durations:
+                stats[method] = {'count': 0, 'mean_duration': None, 'std_duration': None, 
+                               'trial_completion_rate': None, 'subject_std_duration': None, 
+                               'subject_std_completion_rate': None}
+                continue
+            
+            # Calculate trial completion rate
+            successful_trials = sum(is_successful)
+            total_trials = len(is_successful)
+            trial_completion_rate = successful_trials / total_trials if total_trials > 0 else 0.0
+            
+            # Calculate subject-level statistics
+            subject_stats = {}
+            for i, subject_id in enumerate(subject_ids):
+                if subject_id not in subject_stats:
+                    subject_stats[subject_id] = {'durations': [], 'completion_rates': []}
+                subject_stats[subject_id]['durations'].append(durations[i])
+                subject_stats[subject_id]['completion_rates'].append(is_successful[i])
+            
+            # Calculate mean duration and completion rate per subject
+            subject_mean_durations = [np.mean(data['durations']) for data in subject_stats.values()]
+            subject_completion_rates = [np.mean(data['completion_rates']) for data in subject_stats.values()]
+            
+            # Calculate standard deviation across subjects
+            subject_std_duration = np.std(subject_mean_durations) if len(subject_mean_durations) > 1 else 0.0
+            subject_std_completion_rate = np.std(subject_completion_rates) if len(subject_completion_rates) > 1 else 0.0
+            
+            stats[method] = {
+                'count': len(durations),
+                'mean_duration': np.mean(durations),
+                'std_duration': np.std(durations),
+                'trial_completion_rate': trial_completion_rate,
+                'subject_std_duration': subject_std_duration,
+                'subject_std_completion_rate': subject_std_completion_rate
+            }
+        
+        spatial_stats[spatial_condition] = stats
+    
+    return spatial_stats
+
+def plot_methods_comparison_by_spatial_only(stats_by_ambiguity, method_data_by_ambiguity):
+    """Plot comparison of three interaction techniques under high spatial and low spatial conditions only"""
+    # Calculate spatial-only statistics
+    spatial_stats = calculate_spatial_only_statistics(method_data_by_ambiguity)
+    
+    # Prepare data for plotting
+    data_list = []
+    for spatial_condition, stats in spatial_stats.items():
+        spatial_label = 'High Spatial' if spatial_condition == 'high_spatial' else 'Low Spatial'
+        
+        for method in OPCG_METHODS:
+            if method in stats and stats[method]['count'] > 0:
+                data_list.append({
+                    'method': method,
+                    'spatial_ambiguity': spatial_label,
+                    'duration': stats[method]['mean_duration'],
+                    'completion_rate': stats[method]['trial_completion_rate'],
+                    'subject_std_duration': stats[method]['subject_std_duration'],
+                    'subject_std_completion_rate': stats[method]['subject_std_completion_rate']
+                })
+    
+    df = pd.DataFrame(data_list)
+    
+    # Create plots for each metric
+    metrics = [
+        ('duration', 'Selection Time [seconds]'),
+        ('completion_rate', 'Trial Completion Rate'),
+    ]
+    
+    for metric, ylabel in metrics:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        
+        # Set up x positions
+        spatial_positions = {'High Spatial': 1.0, 'Low Spatial': 2.0}
+        method_offsets = {'A': -0.25, 'E': 0.0, 'C': 0.25}
+        bar_width = 0.25
+        
+        # Plot bars for each method and spatial condition
+        for spatial_label in ['High Spatial', 'Low Spatial']:
+            x_base = spatial_positions[spatial_label]
+            
+            for method in OPCG_METHODS:
+                method_data = df[(df['method'] == method) & (df['spatial_ambiguity'] == spatial_label)]
+                
+                if not method_data.empty:
+                    x_pos = x_base + method_offsets[method]
+                    y_value = method_data[metric].values[0]
+                    color = METHOD_COLORS[method]
+                    
+                    # Draw bar
+                    ax.bar(x_pos, y_value, bar_width, color=color, alpha=0.8, label=method if spatial_label == 'High Spatial' else '')
+                    
+                    # Add error bars using subject-level standard deviation
+                    if metric == 'duration':
+                        error_value = method_data['subject_std_duration'].values[0]
+                    else:  # completion_rate
+                        error_value = method_data['subject_std_completion_rate'].values[0]
+                    
+                    if error_value is not None and not np.isnan(error_value):
+                        ax.errorbar(x_pos, y_value, yerr=error_value, fmt='none', 
+                                  color=color, capsize=5, capthick=2, zorder=3)
+        
+        # Customize plot
+        ax.set_xlabel('Spatial Ambiguity', fontsize=16, fontweight='bold')
+        ax.set_ylabel(ylabel, fontsize=16, fontweight='bold')
+        ax.set_xticks([1.0, 2.0])
+        ax.set_xticklabels(['High Spatial', 'Low Spatial'], fontsize=14)
+        ax.grid(True, alpha=0.3, axis='y')
+        ax.tick_params(axis='y', labelsize=12)
+        
+        # Format y-axis as percentage for completion_rate
+        if metric == 'completion_rate':
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{x*100:.0f}%'))
+            ax.set_ylim(0, 1.0)
+            ax.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        
+        # Set x-axis limits
+        ax.set_xlim(0.4, 2.6)
+        
+        # Add legend
+        method_labels = {'A': 'BubbleRay', 'E': 'Expand', 'C': 'Point & Grasp'}
+        legend_elements = [plt.Rectangle((0,0),1,1, facecolor=METHOD_COLORS[m], alpha=0.8, 
+                               label=method_labels.get(m, m)) 
+                          for m in OPCG_METHODS]
+        ax.legend(handles=legend_elements, loc='best', fontsize=12, frameon=True)
+        
+        # Save and show
+        filename = f"sota_spatial_comparison_{metric}.png"
+        plt.tight_layout()
         plt.savefig(filename, dpi=300, bbox_inches='tight')
         print(f"Saved: {filename}")
         plt.show()
@@ -706,6 +875,9 @@ def analyze_ambiguity_performance(data_directories):
     print_statistics_by_ambiguity(stats_by_ambiguity)
     
     plot_methods_comparison_by_ambiguity(stats_by_ambiguity)
+    
+    # Plot spatial-only comparison
+    plot_methods_comparison_by_spatial_only(stats_by_ambiguity, method_data_by_ambiguity)
     
     # Save to CSV
     save_ambiguity_analysis_to_csv(stats_by_ambiguity)
@@ -732,5 +904,5 @@ def main_ambiguity_analysis():
     analyze_ambiguity_performance(valid_dirs)
 
 if __name__ == "__main__":
-    print("OPCG Performance Analysis Tool")
+    print("SOTA Performance Analysis Tool")
     main_ambiguity_analysis()

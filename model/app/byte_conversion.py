@@ -7,6 +7,8 @@ class SequentialByteDecoder:
         self.idx = 0
 
     def get_int(self) -> int:
+        if self.idx + 4 > len(self.arr):
+            raise struct.error(f"Not enough bytes for int. Required: 4, Available: {len(self.arr) - self.idx}")
         x = struct.unpack('i', self.arr[self.idx:self.idx + 4])[0]
         self.idx += 4
         return x
@@ -17,16 +19,21 @@ class SequentialByteDecoder:
         return x
 
     def get_vector(self, dim=3) -> np.array:
-        x =  struct.unpack(f"{dim}f", self.arr[self.idx:self.idx + 4*dim])
-        self.idx += 4*dim
+        required_bytes = 4 * dim
+        if self.idx + required_bytes > len(self.arr):
+            raise struct.error(f"Not enough bytes for vector. Required: {required_bytes}, Available: {len(self.arr) - self.idx}")
+        x =  struct.unpack(f"{dim}f", self.arr[self.idx:self.idx + required_bytes])
+        self.idx += required_bytes
         return np.array(x, dtype=np.float32)
 
     # Change from (x, y, z, w) to (w, x, y, z)
     def get_quaternion(self) -> np.array:
-        x, y, z, w = struct.unpack("4f", self.arr[self.idx : self.idx + 4*4])
-        self.idx += 16
-        return np.array([w, x, y, z], dtype=np.float32)
-        # return get_vector(dim = 4)
+        required_bytes = 4 * 4  # 4 floats * 4 bytes each
+        if self.idx + required_bytes > len(self.arr):
+            raise struct.error(f"Not enough bytes for quaternion. Required: {required_bytes}, Available: {len(self.arr) - self.idx}")
+        x, y, z, w = struct.unpack("4f", self.arr[self.idx : self.idx + required_bytes])
+        self.idx += required_bytes
+        return np.array([x, y, z, w], dtype=np.float32)
 
     def get_vector_array(self, n, dim=3):
         out = np.empty((n, dim), dtype=np.float32)

@@ -1,0 +1,2 @@
+# Override aitviewer to use PyQt6 (avoids PyQt5 resize/_ctx bug on Windows).
+window_type: "pyqt6"

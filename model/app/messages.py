@@ -26,7 +26,9 @@ class TelemetryMessage:
     @staticmethod
     def from_bytes(data: bytes):
         decoder = SequentialByteDecoder(data)
-        telemetry_packet_idx = decoder.get_unsigned_long_long()
+        
+        # Unity sends packetIdx as int (4 bytes), not unsigned long long (8 bytes)
+        telemetry_packet_idx = decoder.get_int()
 
         hand_root_orientation = decoder.get_quaternion()
         hand_root_position = decoder.get_vector()
@@ -62,6 +64,7 @@ class TelemetryMessage:
 # python -> unity
 @dataclass
 class CommandMessage:
+    packetid: int
     object_count: int
     confidence_score: list
     object_type_ids: list
@@ -70,6 +73,7 @@ class CommandMessage:
 
     def to_bytes(self) -> bytes:
         encoder = SequentialByteEncoder()
+        encoder.add_int(self.packetid)
         encoder.add_int(self.object_count)
 
         # for i in range(self.object_count):

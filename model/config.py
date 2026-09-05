@@ -2,7 +2,7 @@
 model_config = dict(
 
   bps_params=dict(
-      filepath="./data",
+      filepath="./files",
       dtype="torch.float32",
   ),
 

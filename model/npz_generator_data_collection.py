@@ -137,7 +137,7 @@ def save_scene_as_image(scene, save_path, width=920, height=800):
     scene.camera.resolution = (width, height)
     
     # Render the scene to an image
-    png = scene.save_image(resolution=(width, height), visible=True)
+    png = scene.save_image(resolution=(width, height), visible=False)
     
     # Save the image
     with open(save_path, 'wb') as f:
@@ -181,138 +181,149 @@ joint_colors = np.array(
     [colors["ring"]]*4 + [colors["pinky"]]*4
 )
 
-test_user_id = "s2"
-is_visualize = False
-data_dir = Path("../collected_data") / test_user_id
-output_dir = Path("session_npz_files") / test_user_id
-output_dir.mkdir(parents=True, exist_ok=True)
+test_user_ids = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10",
+ "s11", "s12", "s13", "s14", "s15",  "s17", "s18", "s19", "s20"]
+# test_user_ids = ["s13"]
+is_visualize = True
 
-root_positions = []
-count_dir = 0
-idx = 0
-for obj_dir in data_dir.iterdir():
-    if not obj_dir.is_dir():
-        continue
-    json_files = list(obj_dir.glob("**/all_trials.json"))
+if __name__ == "__main__":
+    for test_user_id in test_user_ids:
+        
+        data_dir = Path("../dataset/collected_data") / test_user_id
+        output_dir = Path("session_npz_files/") / test_user_id
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-    for json_idx, json_file in enumerate(json_files):
-        with open(json_file, "r") as f:
-            trials = json.load(f)
+        root_positions = []
+        count_dir = 0
+        idx = 0
+        for obj_dir in data_dir.iterdir():
+            if not obj_dir.is_dir():
+                continue
+            json_files = list(obj_dir.glob("**/all_trials.json"))
 
-        for trial in trials:
-            trial_idx = trial["trialIndex"]
-            target_object_name = trial["targetObjectName"]
-            object_name = trial["objectName"]
-            trial_index = trial["trialIndex"]
-            ir_label = trial["irLabel"]  # in-reach label
-            oor_label = trial["oorLabel"]  # out-of-reach label
-            is_in_reach_frame = trial["isInReachFrame"]
-            is_labeled_frame = trial["isLabeledFrame"]
-            obj_pos_world = torch.Tensor(trial["objectPoseWorld"]["position"])
-            obj_rot_world = torch.Tensor(trial["objectPoseWorld"]["rotation"])
-            joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
-            joint_rot_world = torch.Tensor(trial["gestures"]["jointsRotationWorld"])
-            
-            # obj_pos_world = torch.Tensor(trial["objectPoseCamera"]["position"])
-            # obj_rot_world = torch.Tensor(trial["objectPoseCamera"]["rotation"])
-            # joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionCamera"])
+            for json_idx, json_file in enumerate(json_files):
+                with open(json_file, "r") as f:
+                    trials = json.load(f)
 
-            obj_pos_in_labeled_frame = obj_pos_world[is_labeled_frame]
-            obj_rot_in_labeled_frame = obj_rot_world[is_labeled_frame]
-            obj_rot_matrix = get_object_rotation_matrix(obj_rot_in_labeled_frame, T_quat_unity2python)
-            obj_pcl = obj_dataset.get_pcl([object_name], obj_rot_matrix)
-            obj_bps = bps.encode(obj_pcl.reshape(-1, 3), feature_type=["dists"])["dists"]
-            obj_trans = convert_unity_to_python(torch.tensor([[0.0, 0.0, 0.0]]), R_unity2python)
-            
-            root_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 0:1].squeeze(0)
-            leaf_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 1:].squeeze(0)
-            hand_rot_in_labeled_frame = joint_rot_world[is_labeled_frame, :].squeeze(0)
-            hand_rot_matrix = get_object_rotation_matrix(hand_rot_in_labeled_frame, T_quat_unity2python)
-            hand_pts = create_hand_pointcloud(leaf_pos_in_labeled_frame, root_pos_in_labeled_frame, R_unity2python, with_root=True)
-            
+                for trial in trials:
+                    trial_idx = trial["trialIndex"]
+                    target_object_name = trial["targetObjectName"]
+                    object_name = trial["objectName"]
+                    trial_index = trial["trialIndex"]
+                    ir_label = trial["irLabel"]  # in-reach label
+                    oor_label = trial["oorLabel"]  # out-of-reach label
+                    is_in_reach_frame = trial["isInReachFrame"]
+                    is_labeled_frame = trial["isLabeledFrame"]
+                    obj_pos_world = torch.Tensor(trial["objectPoseWorld"]["position"])
+                    obj_rot_world = torch.Tensor(trial["objectPoseWorld"]["rotation"])
+                    joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
+                    joint_rot_world = torch.Tensor(trial["gestures"]["jointsRotationWorld"])
 
-            # # Convert to object system
-            # R_world_to_obj = obj_rot_matrix.squeeze().T
-            # obj_pcl[0] = convert_unity_to_python(obj_pcl[0], R_world_to_obj)
-            # hand_pts = torch.einsum("ij,nj->ni", R_world_to_obj, hand_pts)
-            # hand_rot_matrix = torch.einsum("ij,njk->nik", R_world_to_obj, hand_rot_matrix)
-            
-            hand_rot_6d = rotation_matrix_to_6d(hand_rot_matrix)
-            
-            if ir_label == 1 and oor_label == 1:
-                # Positive sample - save with in-reach data
-                in_reach_root = joint_pos_world[is_in_reach_frame, 0:1].squeeze(0)
-                in_reach_leaf = joint_pos_world[is_in_reach_frame, 1:].squeeze(0)
-                hand_rot_in_reach_frame = joint_rot_world[is_in_reach_frame, :].squeeze(0)
-                in_reach_pts = create_hand_pointcloud(in_reach_leaf, in_reach_root, R_unity2python, with_root=True)
-                hand_rot_matrix = get_object_rotation_matrix(hand_rot_in_reach_frame, T_quat_unity2python)
-                
-
-                obj_trans = obj_pos_world[is_in_reach_frame] - in_reach_root
-                obj_trans = convert_unity_to_python(obj_trans.float(), R_unity2python)
-
-                # # Convert to object system
-                # in_reach_pts = torch.einsum("ij,nj->ni", R_world_to_obj, in_reach_pts)
-                # obj_trans = convert_unity_to_python(obj_trans, R_world_to_obj)
-                # hand_rot_matrix = torch.einsum("ij,njk->nik", R_world_to_obj, hand_rot_matrix)
-
-                hand_rot_6d = rotation_matrix_to_6d(hand_rot_matrix)
-
-                if trial_idx == 0:
-                    root_positions.append(root_pos_in_labeled_frame.squeeze())
-
-                save_path, save_dir, fname = get_save_path_and_dir(output_dir, target_object_name, json_idx, trial_idx, ir_label, oor_label, object_name)
-                if is_visualize:
-                    print(save_path)
-                    # Create image save path
-                    folder, subject, target, trial, filename = save_path.parts
-                    img_save_path = Path(folder) / subject / f"{target}_{save_path.stem}.png"
-                    # if img_save_path.exists():
-                    #     print(f"Image already exists, skipping: {img_save_path}")
-                    #     continue
-                    
-                    img_save_path.parent.mkdir(parents=True, exist_ok=True)
-                    visualize_scene(in_reach_pts.numpy(), joint_colors, obj_pcl[0], obj_trans, hand_rot_matrix, save_image=False, save_path=img_save_path)
-                    continue
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-                save_feature_file(save_path, object_name, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), hand_rot_6d, ir_label, oor_label, in_reach_pts.numpy())
-            else:
-                save_path, save_dir, fname = get_save_path_and_dir(output_dir, target_object_name, json_idx, trial_idx, ir_label, oor_label, object_name)
-                if is_visualize:
-                    if 'not_sure' in str(save_path):
+                    if target_object_name != 'teapot':
                         continue
-                    print(save_path)
-                    folder, subject, target, trial, filename = save_path.parts
-                    img_save_path = Path(folder) / subject / f"{target}_{save_path.stem}.png"
+                    if object_name != target_object_name:
+                        continue
                     
-                    # if img_save_path.exists():
-                    #     print(f"Image already exists, skipping: {img_save_path}")
-                    #     continue
-                    img_save_path.parent.mkdir(parents=True, exist_ok=True)
-                    visualize_scene(hand_pts.numpy(), joint_colors, obj_pcl[0], obj_trans, hand_rot_matrix, save_image=False, save_path=img_save_path)
-                    continue
-                save_path.parent.mkdir(parents=True, exist_ok=True)
-                save_feature_file(save_path, object_name, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), hand_rot_6d, ir_label, oor_label)
-            idx += 1
+                    # obj_pos_world = torch.Tensor(trial["objectPoseCamera"]["position"])
+                    # obj_rot_world = torch.Tensor(trial["objectPoseCamera"]["rotation"])
+                    # joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionCamera"])
 
-print(idx)
+                    obj_pos_in_labeled_frame = obj_pos_world[is_labeled_frame]
+                    obj_rot_in_labeled_frame = obj_rot_world[is_labeled_frame]
+                    obj_rot_matrix = get_object_rotation_matrix(obj_rot_in_labeled_frame, T_quat_unity2python)
+                    obj_pcl = obj_dataset.get_pcl([object_name], obj_rot_matrix)
+                    obj_bps = bps.encode(obj_pcl.reshape(-1, 3), feature_type=["dists"])["dists"]
+                    obj_trans = convert_unity_to_python(torch.tensor([[0.0, 0.0, 0.0]]), R_unity2python)
+                    
+                    root_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 0:1].squeeze(0)
+                    leaf_pos_in_labeled_frame = joint_pos_world[is_labeled_frame, 1:].squeeze(0)
+                    hand_rot_in_labeled_frame = joint_rot_world[is_labeled_frame, :].squeeze(0)
+                    hand_rot_matrix = get_object_rotation_matrix(hand_rot_in_labeled_frame, T_quat_unity2python)
+                    hand_pts = create_hand_pointcloud(leaf_pos_in_labeled_frame, root_pos_in_labeled_frame, R_unity2python, with_root=True)
+                    
 
-root_positions = torch.cat(root_positions).reshape(-1, 3).numpy()
-# project root positions to the xy plane and visualize the point distribution with matplotlib, and make (0, 0) as the figure center
-root_positions_xy = root_positions[:, :2]
-import matplotlib.pyplot as plt
-plt.figure(figsize=(8, 8))
-plt.scatter(root_positions_xy[:, 0], root_positions_xy[:, 1], alpha=0.5)
-x_max = np.max(np.abs(root_positions_xy[:, 0]))
-y_max = np.max(np.abs(root_positions_xy[:, 1]))
-max_range = max(x_max, y_max)
-plt.xlim(-max_range, max_range)
-plt.ylim(-max_range, max_range)
-plt.axhline(0, color='gray', linewidth=0.5)
-plt.axvline(0, color='gray', linewidth=0.5)
-plt.xlabel('X')
-plt.ylabel('Y')
-plt.title('Root Positions Projected to XY Plane')
-plt.gca().set_aspect('equal', adjustable='box')
-plt.savefig(f'root_positions_xy_{test_user_id}.png', dpi=300)
-plt.show()
+                    # # Convert to object system
+                    # R_world_to_obj = obj_rot_matrix.squeeze().T
+                    # obj_pcl[0] = convert_unity_to_python(obj_pcl[0], R_world_to_obj)
+                    # hand_pts = torch.einsum("ij,nj->ni", R_world_to_obj, hand_pts)
+                    # hand_rot_matrix = torch.einsum("ij,njk->nik", R_world_to_obj, hand_rot_matrix)
+                    
+                    hand_rot_6d = rotation_matrix_to_6d(hand_rot_matrix)
+                    
+                    if ir_label == 1 and oor_label == 1:
+                        # Positive sample - save with in-reach data
+                        in_reach_root = joint_pos_world[is_in_reach_frame, 0:1].squeeze(0)
+                        in_reach_leaf = joint_pos_world[is_in_reach_frame, 1:].squeeze(0)
+                        hand_rot_in_reach_frame = joint_rot_world[is_in_reach_frame, :].squeeze(0)
+                        in_reach_pts = create_hand_pointcloud(in_reach_leaf, in_reach_root, R_unity2python, with_root=True)
+                        hand_rot_matrix = get_object_rotation_matrix(hand_rot_in_reach_frame, T_quat_unity2python)
+                        
+
+                        obj_trans = obj_pos_world[is_in_reach_frame] - in_reach_root
+                        obj_trans = convert_unity_to_python(obj_trans.float(), R_unity2python)
+
+                        # # Convert to object system
+                        # in_reach_pts = torch.einsum("ij,nj->ni", R_world_to_obj, in_reach_pts)
+                        # obj_trans = convert_unity_to_python(obj_trans, R_world_to_obj)
+                        # hand_rot_matrix = torch.einsum("ij,njk->nik", R_world_to_obj, hand_rot_matrix)
+
+                        hand_rot_6d = rotation_matrix_to_6d(hand_rot_matrix)
+
+                        if trial_idx == 0:
+                            root_positions.append(root_pos_in_labeled_frame.squeeze())
+
+                        save_path, save_dir, fname = get_save_path_and_dir(output_dir, target_object_name, json_idx, trial_idx, ir_label, oor_label, object_name)
+                        if is_visualize:
+                            print(save_path)
+                            # Create image save path
+                            folder, subject, target, trial, filename = save_path.parts
+                            img_save_path = Path(folder) / subject / "pos" / f"{target}_{save_path.stem}.png"
+                            if img_save_path.exists():
+                                print(f"Image already exists, skipping: {img_save_path}")
+                                continue
+                            
+                            img_save_path.parent.mkdir(parents=True, exist_ok=True)
+                            visualize_scene(hand_pts.numpy(), joint_colors, obj_pcl[0], obj_trans, hand_rot_matrix, save_image=False, save_path=img_save_path)
+                            continue
+                        save_path.parent.mkdir(parents=True, exist_ok=True)
+                        save_feature_file(save_path, object_name, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), hand_rot_6d, ir_label, oor_label, in_reach_pts.numpy())
+                    else:
+                        save_path, save_dir, fname = get_save_path_and_dir(output_dir, target_object_name, json_idx, trial_idx, ir_label, oor_label, object_name)
+                        if is_visualize:
+                            if 'not_sure' in str(save_path):
+                                continue
+                            print(save_path)
+                            folder, subject, target, trial, filename = save_path.parts
+                            img_save_path = Path(folder) / subject / "non_pos"  / f"{target}_{save_path.stem}.png"
+                            
+                            if img_save_path.exists():
+                                print(f"Image already exists, skipping: {img_save_path}")
+                                continue
+                            img_save_path.parent.mkdir(parents=True, exist_ok=True)
+                            visualize_scene(hand_pts.numpy(), joint_colors, obj_pcl[0], obj_trans, hand_rot_matrix, save_image=False, save_path=img_save_path)
+                            continue
+                        save_path.parent.mkdir(parents=True, exist_ok=True)
+                        save_feature_file(save_path, object_name, obj_rot_matrix, obj_pcl[0].numpy(), obj_bps, obj_trans, hand_pts.numpy(), hand_rot_6d, ir_label, oor_label)
+                    idx += 1
+
+        print(idx)
+
+        # root_positions = torch.cat(root_positions).reshape(-1, 3).numpy()
+        # # project root positions to the xy plane and visualize the point distribution with matplotlib, and make (0, 0) as the figure center
+        # root_positions_xy = root_positions[:, :2]
+        # import matplotlib.pyplot as plt
+        # plt.figure(figsize=(8, 8))
+        # plt.scatter(root_positions_xy[:, 0], root_positions_xy[:, 1], alpha=0.5)
+        # x_max = np.max(np.abs(root_positions_xy[:, 0]))
+        # y_max = np.max(np.abs(root_positions_xy[:, 0]))
+        # max_range = max(x_max, y_max)
+        # plt.xlim(-max_range, max_range)
+        # plt.ylim(-max_range, max_range)
+        # plt.axhline(0, color='gray', linewidth=0.5)
+        # plt.axvline(0, color='gray', linewidth=0.5)
+        # plt.xlabel('X')
+        # plt.ylabel('Y')
+        # plt.title('Root Positions Projected to XY Plane')
+        # plt.gca().set_aspect('equal', adjustable='box')
+        # plt.savefig(f'root_positions_xy_{test_user_id}.png', dpi=300)
+        # plt.show()

@@ -1,0 +1,50 @@
+Expected Calibration Error (ECE) Analysis
+==================================================
+
+ECE measures probability calibration quality
+Lower ECE = Better calibration
+Analysis covers 30 target objects
+
+DETAILED ECE SCORES (Ranked by ECE - Best to Worst)
+------------------------------------------------------------
+Object          ECE        Pos    Neg    Total    Status      
+------------------------------------------------------------
+crackerbox      0.0823     65     268    333      Good        
+cup             0.0845     88     201    289      Good        
+eyeglasses      0.0881     75     261    336      Good        
+bowl            0.0896     60     282    342      Good        
+watch           0.0902     91     201    292      Good        
+disklid         0.1005     69     247    316      Fair        
+apple           0.1014     96     186    282      Fair        
+stapler         0.1047     72     203    275      Fair        
+spherelarge     0.1126     75     264    339      Fair        
+pottedmeatcan   0.1133     77     216    293      Fair        
+plate           0.1158     71     272    343      Fair        
+binoculars      0.1161     79     249    328      Fair        
+mouse           0.1414     68     257    325      Fair        
+alarmclock      0.1466     74     249    323      Fair        
+mug             0.1591     92     216    308      Poor        
+teapot          0.1735     62     302    364      Poor        
+camera          0.1773     61     247    308      Poor        
+toothpaste      0.1787     94     207    301      Poor        
+flashlight      0.1920     81     232    313      Poor        
+wineglass       0.2063     107    184    291      Very Poor   
+spheresmall     0.2460     124    209    333      Very Poor   
+waterbottle     0.2470     119    234    353      Very Poor   
+headphones      0.2665     98     198    296      Very Poor   
+fryingpan       0.2758     75     255    330      Very Poor   
+banana          0.3275     102    201    303      Very Poor   
+gamecontroller  0.3345     62     231    293      Very Poor   
+scissors        0.3391     69     267    336      Very Poor   
+knife           0.3483     74     242    316      Very Poor   
+smartphone      0.4087     66     255    321      Very Poor   
+hammer          0.4261     77     232    309      Very Poor   
+
+SUMMARY STATISTICS
+-------------------------
+Excellent (ECE ≤ 0.05): 0
+Good (0.05 < ECE ≤ 0.10): 5
+Fair (0.10 < ECE ≤ 0.15): 9
+Poor (0.15 < ECE ≤ 0.20): 5
+Very Poor (ECE > 0.20): 11
+Objects with no data: 0
