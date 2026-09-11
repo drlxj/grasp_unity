@@ -61,8 +61,25 @@ _BONE_IDX = np.asarray(HAND_SKELETON_LINES).reshape(-1)
 # slightly-downward view, and keeps the object roughly centred as it approaches.
 CAMERA_AZIMUTH_DEG = 160.0
 CAMERA_ELEVATION_DEG = 22.0
-CAMERA_MARGIN = 1.1
 CAMERA_ASPECT = 16.0 / 9.0
+# Share of the half-frame the trial may occupy, measured on screen. A multiplier on the
+# camera distance would be the obvious knob, but it barely moves a point that is already
+# far away -- the distant out-of-reach object ended up glued to the frame edge with one.
+CAMERA_SAFE_AREA = 0.92
+
+# A fixed ground plane for depth, placed once per trial this far below the lowest point
+# the trial ever reaches, so nothing passes through it. It is kept close on purpose: the
+# first-person camera looks down at 22 degrees and sees nothing steeper than 44.5, so
+# with the floor 70 cm down the patch under the object is out of shot and its shadow
+# cannot land near it. At 15 cm the shadow sits right under the object.
+FLOOR_DROP = 0.15
+
+# The shadow comes from the light on the camera's side, raised to this elevation. Left at
+# its default 34 degrees -- close to the camera's own 22 -- the shadow falls straight
+# behind the object and is hidden by it; the default shadow caster, on the far side,
+# throws it towards the camera and out of shot. Only this light moves, so the overall
+# lighting, and with it the verdict colours, stay as they were.
+KEY_LIGHT_ELEVATION_DEG = 60.0
 
 Trial = namedtuple(
     "Trial",
@@ -275,7 +292,9 @@ def frame_camera(camera, trial, azimuth_deg, elevation_deg, aspect=CAMERA_ASPECT
     right /= np.linalg.norm(right)
     screen_up = np.cross(direction, right)
 
-    tan_v = np.tan(np.radians(camera.fov) / 2.0)
+    # Fit against a frustum shrunk to the safe area, so the padding is the same on screen
+    # for a point 10 cm away as for one 1.6 m away.
+    tan_v = np.tan(np.radians(camera.fov) / 2.0) * CAMERA_SAFE_AREA
     tan_h = tan_v * aspect
 
     # For a point q (relative to the target) the camera must sit at least
@@ -285,10 +304,78 @@ def frame_camera(camera, trial, azimuth_deg, elevation_deg, aspect=CAMERA_ASPECT
     distance = max(
         float(np.max(along + np.abs(q @ screen_up) / tan_v)),
         float(np.max(along + np.abs(q @ right) / tan_h)),
-    ) * CAMERA_MARGIN
+    )
 
     camera.target = np.zeros(3)
     camera.position = direction * distance
+
+
+def place_floor(scene, trial):
+    """
+    Put the floor at one height for the whole trial, FLOOR_DROP below its lowest point.
+
+    aitviewer's own auto_set_floor() re-seats it on the lowest point of the *current*
+    frame, so it jumps as soon as the object is moved into reach and ends up slicing
+    through the hand; that is why the viewer turns auto_set_floor off.
+    """
+    lowest = float(sequence_points(trial)[:, 1].min())
+    scene.floor.enabled = True
+    scene.floor.position[1] = lowest - FLOOR_DROP
+    scene.floor.update_transform(parent_transform=scene.model_matrix)
+
+
+def cast_shadow_from_camera_side(scene, azimuth_deg):
+    """
+    Make the light on the camera's side the shadow caster, raised to
+    KEY_LIGHT_ELEVATION_DEG and swung round to follow the camera's azimuth, so the shadow
+    stays in view under --camera overrides too.
+    """
+    from aitviewer.utils.utils import spherical_coordinates_from_direction
+
+    lights = {light.name: light for light in scene.lights}
+    back, front = lights["Back Light"], lights["Front Light"]  # as set up by aitviewer's Scene
+
+    position = camera_direction(azimuth_deg, KEY_LIGHT_ELEVATION_DEG) * np.linalg.norm(back.position)
+    back.position = position
+    back.elevation, back.azimuth = spherical_coordinates_from_direction(
+        -position / np.linalg.norm(position), degrees=True
+    )
+    back.shadow_enabled = True
+    front.shadow_enabled = False
+
+
+# aitviewer 1.13 was written against moderngl-window 2.x, whose WindowConfig looked for
+# handlers named render(), key_event(), mouse_press_event() and so on. moderngl-window
+# 3.x looks for on_render(), on_key_event(), ... instead, finds none of aitviewer's, and
+# wires the base class's no-ops. Every input event is then dropped without a word: no
+# GUI clicks, no camera orbit, no keyboard shortcuts, no reaction to window resizes.
+_WINDOW_EVENTS = (
+    "render",
+    "resize",
+    "key_event",
+    "mouse_position_event",
+    "mouse_press_event",
+    "mouse_release_event",
+    "mouse_drag_event",
+    "mouse_scroll_event",
+    "unicode_char_entered",
+)
+
+
+def connect_window_events(viewer):
+    """Hand the window's callbacks to aitviewer's handlers under their 2.x names."""
+    for name in _WINDOW_EVENTS:
+        setattr(viewer.wnd, f"{name}_func", getattr(viewer, name))
+
+    # Once events do arrive, the first scroll crashes one layer down: moderngl-window's
+    # imgui bridge writes io.mouse_wheel_h, which pyimgui 2.0 calls mouse_wheel_horizontal.
+    io = viewer.imgui.io
+
+    def mouse_scroll_event(x_offset, y_offset):
+        io.mouse_wheel_horizontal = x_offset
+        io.mouse_wheel = y_offset
+
+    viewer.imgui.mouse_scroll_event = mouse_scroll_event
 
 
 def describe(trial, json_path, trial_idx):
@@ -322,6 +409,8 @@ def parse_args():
                    default=(CAMERA_AZIMUTH_DEG, CAMERA_ELEVATION_DEG),
                    help="override the viewpoint, in degrees "
                         f"(default: {CAMERA_AZIMUTH_DEG:g},{CAMERA_ELEVATION_DEG:g})")
+    p.add_argument("--no-gui", action="store_true",
+                   help="start with aitviewer's panels hidden (press Esc to bring them back)")
     p.add_argument("--window-type", default=DEFAULT_WINDOW_TYPE,
                    help=f"aitviewer window backend (default: {DEFAULT_WINDOW_TYPE})")
     return p.parse_args()
@@ -362,11 +451,10 @@ def main():
                  aspect=v.window_size[0] / v.window_size[1])
     # Everything is wrist-relative, so the origin gizmo just sits inside the hand.
     v.scene.origin.enabled = False
-    # The floor tracks the lowest point of the *current* frame, so it jumps when the
-    # object moves into reach and ends up slicing through the hand. Drop it entirely.
-    v.scene.floor.enabled = False
-    # Viewer does not implement on_render; use its render() as the window callback
-    v.wnd.render_func = v.render
+    place_floor(v.scene, trial)
+    cast_shadow_from_camera_side(v.scene, args.camera[0])
+    connect_window_events(v)
+    v.render_gui = not args.no_gui
     v.run()
 
 
