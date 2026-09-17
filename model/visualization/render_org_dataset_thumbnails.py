@@ -26,9 +26,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+# dataset_utils and aitviewer_utils live in model/, one level up; outputs stay in model/.
+MODEL_DIR = Path(__file__).resolve().parents[1]
+if str(MODEL_DIR) not in sys.path:
+    sys.path.insert(0, str(MODEL_DIR))
+
+import aitviewer_utils
+import dataset_utils
 import visualize_collected_data as viz
 
-MODEL_DIR = Path(__file__).resolve().parent
 DEFAULT_CSV = MODEL_DIR / "outputs" / "org_dataset" / "trials.csv"
 DEFAULT_OUT = MODEL_DIR / "outputs" / "org_dataset"
 ROLES = ("target", "replacement")
@@ -69,11 +75,11 @@ def load_still(row, sources):
     settled on with the object in hand -- and the out-of-reach keyframe otherwise, which
     is the only labelled moment in a trial that never came within reach.
 
-    Slicing to one frame is also what makes the framing usable: viz.frame_camera fits
-    every frame of a trial into shot, and for a full trial that includes the object at
-    its out-of-reach distance, 1.6 m away, which leaves the hand a speck in the middle.
+    Slicing to one frame is also what makes the framing usable: frame_camera fits every
+    frame of a trial into shot, and for a full trial that includes the object at its
+    out-of-reach distance, 1.6 m away, which leaves the hand a speck in the middle.
     """
-    trial = viz.load_trial(viz.ORG_DATASET / Path(row.rel_path), int(row.trial_index), sources)
+    trial = dataset_utils.load_trial(viz.ORG_DATASET / Path(row.rel_path), int(row.trial_index), sources)
     frame = trial.ir_frame if trial.ir_frame is not None else trial.oor_frame
     return trial._replace(hand=trial.hand[frame:frame + 1],
                           obj_rot=trial.obj_rot[frame:frame + 1],
@@ -83,7 +89,8 @@ def load_still(row, sources):
 def fit_distance(renderer, still, camera):
     """How far the camera has to sit for this still to fit, in metres from the wrist."""
     width, height = renderer.window_size
-    viz.frame_camera(renderer.scene.camera, still, *camera, aspect=width / height)
+    aitviewer_utils.frame_camera(renderer.scene.camera, still, *camera, aspect=width / height,
+                                 safe_area=viz.CAMERA_SAFE_AREA)
     return float(np.linalg.norm(renderer.scene.camera.position))
 
 
@@ -99,7 +106,7 @@ def render(renderer, still, out_path, camera, distance):
     renderable = viz.build_renderables(still)
     renderer.scene.add(*renderable)
     renderer.scene.camera.target = np.zeros(3)
-    renderer.scene.camera.position = viz.camera_direction(*camera) * distance
+    renderer.scene.camera.position = aitviewer_utils.camera_direction(*camera) * distance
     renderer.scene.current_frame_id = 0
     renderer.save_frame(str(out_path))
     for node in renderable:
@@ -140,8 +147,9 @@ def build_renderer(size):
     from aitviewer.headless import HeadlessRenderer
 
     renderer = HeadlessRenderer(size=(size, size))
-    # Same three suppressions as the interactive viewer: everything is wrist-relative,
-    # so the origin gizmo sits inside the hand and the floor slices through it.
+    # Everything is wrist-relative, so the origin gizmo sits inside the hand. Unlike the
+    # interactive viewer there is no floor: common_crop reads the background off a corner
+    # pixel, and a checkerboard would make the whole frame count as ink.
     renderer.auto_set_camera_target = False
     renderer.auto_set_floor = False
     renderer.scene.origin.enabled = False
@@ -220,7 +228,7 @@ def main():
 
     frame_dir = args.out_dir / "thumbnails"
     frame_dir.mkdir(parents=True, exist_ok=True)
-    sources = viz.load_object_sources()
+    sources = dataset_utils.load_object_sources()
     renderer = build_renderer(args.size)
 
     camera = (viz.CAMERA_AZIMUTH_DEG, viz.CAMERA_ELEVATION_DEG)

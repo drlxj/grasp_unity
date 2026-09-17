@@ -25,7 +25,8 @@ import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
 
-MODEL_DIR = Path(__file__).resolve().parent
+# This file lives in model/visualization/; outputs stay in model/outputs/.
+MODEL_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_CSV = MODEL_DIR / "outputs" / "org_dataset" / "trials.csv"
 DEFAULT_OUT = MODEL_DIR / "outputs" / "org_dataset"
 

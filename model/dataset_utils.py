@@ -1,11 +1,20 @@
 """
 Shared utils for preprocessing and loading hand-object dataset.
-Used by preprocess_all_dataset.py, visualize_npz_aitviewer.py, visualize_json_aitviewer.py.
+Used by preprocess_all_dataset.py, visualize_npz_aitviewer.py and the scripts in visualization/.
 """
+from collections import namedtuple
 from pathlib import Path
 import json
 import numpy as np
 import torch
+
+_MODEL_DIR = Path(__file__).resolve().parent
+
+# Unity's left-handed frame to the right-handed one used here, by mirroring x.
+# T_QUAT_UNITY2PYTHON applies the same mirror to (w, x, y, z) quaternions.
+R_UNITY2PYTHON = torch.tensor([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+T_QUAT_UNITY2PYTHON = torch.eye(4)
+T_QUAT_UNITY2PYTHON[1:, 1:] = -R_UNITY2PYTHON
 
 # Lazy imports for heavy deps (ObjectDataset, bps)
 _obj_dataset = None
@@ -22,10 +31,8 @@ def _get_rigid():
         from bps_torch.bps import bps_torch
         _obj_dataset = ObjectDataset()
         _bps = bps_torch(bps_type="custom", custom_basis=torch.from_numpy(np.load("./files/bps_new.npz")['basis']).to(torch.float32))
-        _R_unity2python = torch.tensor([[-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
-        T = torch.eye(4)
-        T[1:, 1:] = -_R_unity2python
-        _T_quat_unity2python = T
+        _R_unity2python = R_UNITY2PYTHON
+        _T_quat_unity2python = T_QUAT_UNITY2PYTHON
     return _obj_dataset, _bps, _R_unity2python, _T_quat_unity2python
 
 
@@ -184,4 +191,99 @@ def load_trial_sequence(json_path, trial_index=0):
         np.stack(obj_pcl_list),
         np.stack(obj_trans_list),
         object_name,
+    )
+
+
+# --------------------------------------------------------------------------------------
+# Loading for visualization: batched, no BPS, independent of the working directory.
+
+def load_object_sources():
+    """
+    The object lookup tables for visualization, as (obj.npz, obj_hog.npz).
+
+    Not _get_rigid(): that also builds a bps_torch, which visualization never uses, and
+    reads files/bps_new.npz relative to the working directory, so it only works from
+    model/. Only the ObjectDataset is needed here, and it finds its own files.
+
+    The study mixed objects from two sources: obj.npz covers 25 of the 30 objects and
+    obj_hog.npz the remaining 5 (crackerbox, plate, smartphone, pottedmeatcan, disklid).
+    Both are needed; neither alone covers the dataset.
+    """
+    from app.obj_dataset import ObjectDataset
+
+    primary = ObjectDataset().ds
+    hog_path = _MODEL_DIR / "files" / "obj_hog.npz"
+    fallback = np.load(hog_path, allow_pickle=True)["ds"].item() if hog_path.exists() else {}
+    return primary, fallback
+
+
+def get_object_entry(sources, object_name):
+    """Look the object up in obj.npz first, then obj_hog.npz."""
+    for src in sources:
+        if object_name in src:
+            return src[object_name]
+    known = sorted({k for src in sources for k in src if k != "bps_basis"})
+    raise KeyError(
+        f"Object '{object_name}' is in neither files/obj.npz nor files/obj_hog.npz.\n"
+        f"Known objects: {', '.join(known)}"
+    )
+
+
+Trial = namedtuple(
+    "Trial",
+    "hand obj_rot obj_trans object_name entry oor_frame ir_frame"
+    " ir_label oor_label is_target",
+)
+
+
+def _first_true(mask):
+    """Index of the first True in a per-frame boolean mask, or None if it has none."""
+    idx = np.flatnonzero(np.asarray(mask, dtype=bool))
+    return int(idx[0]) if len(idx) else None
+
+
+def load_trial(json_path, trial_idx, sources):
+    """
+    Load one trial as a Trial: per-frame arrays plus the two phase frames and labels.
+
+    hand (T, 21, 3) and obj_trans (T, 3) are relative to the wrist, as in
+    load_trial_sequence, but computed for all frames at once, and the object comes back
+    as its rotations obj_rot (T, 3, 3) rather than a rotated point cloud, so it can be
+    drawn as a mesh. entry is the object's record from `sources` (load_object_sources).
+
+    A trial is recorded as one continuous take spanning both phases of Figure 3: the
+    participant first grasps at the object while it is out of reach (isLabeledFrame),
+    then the object is moved within reach and the posture is refined (isInReachFrame).
+    """
+    json_path = Path(json_path)
+    with open(json_path, "r") as f:
+        trials = json.load(f)
+    if trial_idx >= len(trials):
+        raise IndexError(f"trial {trial_idx} is out of range: {json_path.name} has {len(trials)} trial(s)")
+
+    trial = trials[trial_idx]
+    object_name = trial["objectName"]
+    obj_pos_world = torch.Tensor(trial["objectPoseWorld"]["position"])
+    obj_rot_world = torch.Tensor(trial["objectPoseWorld"]["rotation"])
+    joint_pos_world = torch.Tensor(trial["gestures"]["jointsPositionWorld"])
+
+    # Hand joints relative to the wrist, with the wrist itself prepended as the root.
+    root = joint_pos_world[:, 0:1]
+    leaf = torch.einsum("ij,tnj->tni", R_UNITY2PYTHON, joint_pos_world[:, 1:] - root)
+    hand_pts = torch.cat([torch.zeros(leaf.shape[0], 1, 3), leaf], dim=1)
+
+    obj_rot = get_object_rotation_matrix(obj_rot_world, T_QUAT_UNITY2PYTHON)
+    obj_trans = torch.einsum("ij,tj->ti", R_UNITY2PYTHON, obj_pos_world - root.squeeze(1))
+
+    return Trial(
+        hand=hand_pts.numpy(),
+        obj_rot=obj_rot.numpy(),
+        obj_trans=obj_trans.numpy(),
+        object_name=object_name,
+        entry=get_object_entry(sources, object_name),  # fail early, before a viewer opens
+        oor_frame=_first_true(trial["isLabeledFrame"]),
+        ir_frame=_first_true(trial["isInReachFrame"]),
+        ir_label=trial["irLabel"],
+        oor_label=trial["oorLabel"],
+        is_target=object_name == trial["targetObjectName"],
     )

@@ -20,7 +20,8 @@ import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-MODEL_DIR = Path(__file__).resolve().parent
+# This file lives in model/visualization/; outputs stay in model/outputs/.
+MODEL_DIR = Path(__file__).resolve().parents[1]
 ORG_DATASET = MODEL_DIR.parent / "dataset" / "ORG_dataset"
 DEFAULT_OUT = MODEL_DIR / "outputs" / "org_dataset" / "trials.csv"
 
