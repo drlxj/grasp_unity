@@ -57,7 +57,6 @@ INK = "#1a1a1a"
 INK_SOFT = "#5c5c5c"
 GRID = "#e4e4e2"
 SURFACE = "#fcfcfb"
-SEQUENTIAL_HUE = COMPATIBLE  # magnitude ramp: one hue, light to dark
 
 # A 2px surface gap between stacked segments, expressed as a linewidth in points.
 SEGMENT_GAP = 1.5
@@ -203,21 +202,20 @@ def fig_at_a_glance(df, out_dir, dpi):
 
     The one that has to land is the last: the labels are per trial, and each trial marks
     exactly one out-of-reach keyframe plus, where the object was pulled in, one in-reach
-    keyframe. 2.1M frames of hand tracking is the raw material, 13k labelled postures is
-    the supervision.
+    keyframe -- so well under one frame in a hundred carries a label.
     """
+    labeled = df.n_labeled.sum() + df.n_in_reach.sum()
+    per_cell = len(df) // (df.subject.nunique() * df.obj_dir.nunique())
     tiles = [
         ("SUBJECTS", f"{df.subject.nunique()}", "s1-s20, no s16"),
         ("OBJECT CLASSES", f"{df.obj_dir.nunique()}", "target and replacement both"),
-        ("SESSIONS", f"{df.rel_path.nunique():,}", "3 per subject x object"),
-        ("TRIALS", f"{len(df):,}", "6 per session, no gaps"),
-        ("TRACKED FRAMES", f"{df.n_frames.sum() / 1e6:.2f}M", "hand + object pose"),
-        ("LABELLED KEYFRAMES", f"{df.n_labeled.sum() + df.n_in_reach.sum():,}",
-         f"{df.n_labeled.sum():,} out-of-reach, {df.n_in_reach.sum():,} in-reach"),
+        ("TRIALS", f"{len(df):,}", f"{per_cell} per subject x object, no gaps"),
+        ("LABELED FRAMES", f"{labeled / df.n_frames.sum():.2%}",
+         f"{labeled:,} of {df.n_frames.sum():,} frames"),
     ]
-    # One axes rather than six: each tile's caption is wider than a sixth of the figure,
+    # One axes rather than a subplot per tile: a caption can be wider than its column,
     # and in separate subplots that overflow drags the tight bounding box out sideways.
-    fig, ax = plt.subplots(figsize=(13.5, 2.5))
+    fig, ax = plt.subplots(figsize=(10, 2.5))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
@@ -233,86 +231,6 @@ def fig_at_a_glance(df, out_dir, dpi):
         if i:
             ax.plot([x - 0.018, x - 0.018], [0.02, 0.72], color=GRID, lw=1.0, clip_on=False)
     return save(fig, out_dir, "fig1_at_a_glance", dpi)
-
-
-def fig_trial_matrix(df, out_dir, dpi):
-    """
-    The 19 x 30 grid the brief asks for.
-
-    Drawn as acceptance rate rather than trial count, because the count is 18 in every
-    cell -- a heatmap of it is one flat colour. The imbalance in this dataset is not in
-    how many trials were collected but in how often a replacement object was accepted,
-    and that varies about tenfold across subjects and fivefold across objects.
-    """
-    distractors = df[~df.is_target]
-    rate = (distractors.assign(hit=distractors.verdict.eq("compatible"))
-            .pivot_table(index="subject", columns="obj_dir", values="hit",
-                         aggfunc="mean", observed=True))
-    counts = distractors.pivot_table(index="subject", columns="obj_dir",
-                                     values="trial_index", aggfunc="size", observed=True)
-    # Rows and columns sorted by their own margin, so the subject effect and the object
-    # effect both read as a gradient instead of being scrambled by alphabetical order.
-    rate = rate.loc[rate.mean(axis=1).sort_values().index,
-                    rate.mean(axis=0).sort_values().index]
-
-    fig = plt.figure(figsize=(13.5, 6.4))
-    # The colour bar gets a column of its own. Handing it ax=ax_right instead makes it
-    # take that space from the marginal, which collapses to a hairline.
-    gs = fig.add_gridspec(2, 3, width_ratios=[1, 0.11, 0.022], height_ratios=[0.16, 1],
-                          wspace=0.035, hspace=0.03)
-    ax = fig.add_subplot(gs[1, 0])
-    ax_top = fig.add_subplot(gs[0, 0], sharex=ax)
-    ax_right = fig.add_subplot(gs[1, 1], sharey=ax)
-    cax = fig.add_subplot(gs[1, 2])
-
-    cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
-        "compat", ["#f4f6f9", SEQUENTIAL_HUE])
-    mesh = ax.pcolormesh(rate.to_numpy(), cmap=cmap, vmin=0, vmax=0.5,
-                         edgecolors=SURFACE, linewidth=1.2)
-    ax.set_xticks(np.arange(len(rate.columns)) + 0.5)
-    ax.set_xticklabels(rate.columns, rotation=90, fontsize=7.5)
-    ax.set_yticks(np.arange(len(rate.index)) + 0.5)
-    ax.set_yticklabels(rate.index, fontsize=7.5)
-    ax.invert_yaxis()
-    bare(ax)
-    ax.set_xlabel("target object  (sorted by mean acceptance)", fontsize=8.5, color=INK_SOFT)
-
-    for axis, series, orient in ((ax_top, rate.mean(axis=0), "v"),
-                                 (ax_right, rate.mean(axis=1), "h")):
-        pos = np.arange(len(series)) + 0.5
-        if orient == "v":
-            axis.bar(pos, series, width=0.7, color=SEQUENTIAL_HUE, zorder=3)
-            axis.set_ylim(0, max(series) * 1.15)
-        else:
-            axis.barh(pos, series, height=0.7, color=SEQUENTIAL_HUE, zorder=3)
-            axis.set_xlim(0, max(series) * 1.15)
-        bare(axis)
-        axis.tick_params(labelbottom=False, labelleft=False, labelright=False)
-        axis.grid(False)
-    ax_top.set_ylabel("mean", fontsize=7.5, color=INK_SOFT, rotation=0, ha="right", va="center")
-    ax_right.set_xlabel("mean", fontsize=7.5, color=INK_SOFT)
-
-    bar = fig.colorbar(mesh, cax=cax)
-    bar.outline.set_visible(False)
-    bar.ax.tick_params(labelsize=7.5, length=0)
-    bar.set_ticks([0, 0.25, 0.5])
-    bar.set_ticklabels(["0%", "25%", "50%+"])
-    bar.set_label("replacement objects accepted (oor 1, ir 1)", fontsize=8, color=INK_SOFT)
-
-    per_cell = counts.to_numpy().min()
-    # Placed inside the figure, in the band the gridspec leaves above the marginal, so
-    # the heading does not push the tight bounding box out and open a gap under itself.
-    fig.text(0, 0.995, "Where the imbalance actually is: acceptance rate per subject x target object",
-             fontsize=12.5, fontweight="bold", va="top")
-    fig.text(0, 0.948,
-             f"Trial counts are uniform -- all {rate.size} cells hold exactly {per_cell} "
-             f"replacement trials ({per_cell // 5} sessions x 5), which is why this is drawn as a "
-             "rate and not a count.\nWhat varies is the verdict: pale rows are strict subjects, "
-             "pale columns are objects almost nothing substitutes for.",
-             fontsize=8.5, color=INK_SOFT, va="top", linespacing=1.45)
-
-    table(rate, out_dir, "fig2_subject_object_matrix")
-    return save(fig, out_dir, "fig2_subject_object_matrix", dpi)
 
 
 def fig_label_cascade(df, out_dir, dpi):
@@ -378,14 +296,11 @@ def fig_subject_bias(df, out_dir, dpi):
     The finding a modeller has to see before splitting the data.
 
     Same protocol, same objects, same counts -- and the share of replacements a subject
-    accepted runs from about 1 in 25 to nearly 1 in 2. Sorted by acceptance rather than
-    by id, because subject number carries no meaning and sorting turns nineteen bars
-    into a single readable gradient.
+    accepted runs from about 1 in 100 to 1 in 4. Bars run s1 to s20 in id order (the
+    subject column is an ordered categorical), so a subject can be looked up directly.
     """
     distractors = df[~df.is_target]
     counts, shares = verdict_shares(distractors, "subject")
-    shares = shares.sort_values("compatible", ascending=False)
-    counts = counts.loc[shares.index]
 
     fig, ax = plt.subplots(figsize=(13.5, 4.6))
     pos = stacked_bars(ax, shares, horizontal=False, label_min=0.12)
@@ -399,119 +314,19 @@ def fig_subject_bias(df, out_dir, dpi):
 
     # The two extremes are named in the deck rather than pinned to their bars: at these
     # shares the callout lands on top of the percentage already inside the segment.
-    top, bottom = shares.index[0], shares.index[-1]
-    hi, lo = shares.compatible.iloc[0], shares.compatible.iloc[-1]
+    top, bottom = shares.compatible.idxmax(), shares.compatible.idxmin()
+    hi, lo = shares.compatible[top], shares.compatible[bottom]
 
     title(ax, "Acceptance is a subject trait as much as an object property",
           f"Replacement trials only, {len(distractors):,} of them, {len(distractors) // len(shares)} per subject. "
-          f"{top} accepted {hi:.0%} of the objects shown to them ({int(counts.compatible.iloc[0])} trials) "
-          f"and {bottom} accepted {lo:.0%} ({int(counts.compatible.iloc[-1])}) -- a {hi / lo:.0f}x spread "
+          f"{top} accepted {hi:.0%} of the objects shown to them ({int(counts.compatible[top])} trials) "
+          f"and {bottom} accepted {lo:.0%} ({int(counts.compatible[bottom])}) -- a {hi / lo:.0f}x spread "
           f"on identical stimuli.\nA random split leaks this; split by subject and the positive rate "
           "of a fold is largely set by who is in it.")
     legend(fig, ax, loc="upper center", ncol=4, bbox=(0.5, -0.09))
 
     table(counts, out_dir, "fig4_subject_bias")
     return save(fig, out_dir, "fig4_subject_bias", dpi)
-
-
-def fig_object_roles(df, out_dir, dpi):
-    """
-    Each object twice: as the target that set the hand posture, and as a replacement
-    judged against someone else's posture.
-
-    These are different questions and they rank differently. As a replacement, an object
-    is asking "does an arbitrary grasp happen to fit me" -- which spheres and bottles
-    answer yes to far more often than bowls and teapots do.
-    """
-    distractors = df[~df.is_target]
-    as_target = verdict_shares(distractors, "obj_dir")[1].sort_values("compatible", ascending=True)
-    shown_counts, as_shown = verdict_shares(distractors, "object_name")
-    # Each panel is ranked by its own question -- that difference is the point of the
-    # figure -- so the CSV beside it is the one that puts the two in a common row order.
-    as_shown = as_shown.loc[as_target.index]
-
-    fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13.5, 7.4),
-                                     gridspec_kw={"wspace": 0.30})
-    for ax, shares, heading, sub in (
-        (ax_l, as_target, "As the target that set the posture",
-         "Of the five replacements shown to a grasp of this object,\nhow many were accepted?"),
-        (ax_r, as_shown.sort_values("compatible"), "As the replacement being judged",
-         "Of every posture this object was shown to,\nhow many accepted it?"),
-    ):
-        pos = stacked_bars(ax, shares, horizontal=True, label_min=0.11)
-        ax.set_yticks(pos)
-        ax.set_yticklabels(shares.index, fontsize=8)
-        ax.set_xlim(0, 1)
-        ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
-        ax.set_xticklabels(["0%", "25%", "50%", "75%", "100%"], fontsize=8)
-        ax.grid(axis="x", zorder=0)
-        bare(ax)
-        title(ax, heading, sub)
-
-    legend(fig, ax_r, loc="upper center", ncol=4, bbox=(-0.18, -0.06))
-    fig.suptitle("The same 30 objects, ranked by the two different questions they answer",
-                 x=0.125, y=1.005, ha="left", fontsize=12, fontweight="bold")
-
-    table(pd.concat({"as_target": as_target, "as_shown": as_shown}, axis=1),
-          out_dir, "fig5_object_roles")
-    return save(fig, out_dir, "fig5_object_roles", dpi)
-
-
-def fig_pair_coverage(df, out_dir, dpi):
-    """
-    How the 870 ordered (target, replacement) pairs were sampled, and how they scored.
-
-    Worth a panel because the pairing is the experiment's real independent variable and
-    it was randomised per session: every off-diagonal pair occurs, but between 2 and 20
-    times, so a per-pair acceptance rate is a noisy estimate at the low end.
-    """
-    distractors = df[~df.is_target]
-    shown = distractors.pivot_table(index="obj_dir", columns="object_name",
-                                    values="trial_index", aggfunc="size")
-    accepted = (distractors.assign(hit=distractors.verdict.eq("compatible"))
-                .pivot_table(index="obj_dir", columns="object_name", values="hit", aggfunc="sum"))
-
-    fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(13.5, 5.6),
-                                     gridspec_kw={"width_ratios": [1, 1.25], "wspace": 0.24})
-
-    per_pair = shown.to_numpy()[~np.isnan(shown.to_numpy())]
-    bins = np.arange(per_pair.min(), per_pair.max() + 2) - 0.5
-    ax_l.hist(per_pair, bins=bins, color=SEQUENTIAL_HUE, zorder=3,
-              edgecolor=SURFACE, linewidth=1.2)
-    ax_l.grid(axis="y", zorder=0)
-    bare(ax_l)
-    ax_l.set_xlabel("times this pair was shown", fontsize=8.5, color=INK_SOFT)
-    ax_l.set_ylabel("ordered object pairs", fontsize=8.5, color=INK_SOFT)
-    ax_l.tick_params(labelsize=8)
-    title(ax_l, "Every pair occurs, none of them often",
-          f"All {int(np.isfinite(shown.to_numpy()).sum())} off-diagonal pairs of the 30x30 grid "
-          f"were sampled\n(median {int(np.nanmedian(shown.to_numpy()))}, "
-          f"range {int(per_pair.min())}-{int(per_pair.max())}). An object is never its own replacement.")
-
-    cmap = matplotlib.colors.LinearSegmentedColormap.from_list("compat", ["#f4f6f9", SEQUENTIAL_HUE])
-    order = accepted.sum(axis=1).sort_values().index
-    mesh = ax_r.pcolormesh(accepted.loc[order, order].to_numpy(), cmap=cmap,
-                           edgecolors=SURFACE, linewidth=0.6)
-    ax_r.set_xticks(np.arange(len(order)) + 0.5)
-    ax_r.set_xticklabels(order, rotation=90, fontsize=6.5)
-    ax_r.set_yticks(np.arange(len(order)) + 0.5)
-    ax_r.set_yticklabels(order, fontsize=6.5)
-    ax_r.invert_yaxis()
-    bare(ax_r)
-    ax_r.set_xlabel("replacement shown", fontsize=8.5, color=INK_SOFT)
-    ax_r.set_ylabel("posture came from", fontsize=8.5, color=INK_SOFT)
-    bar = fig.colorbar(mesh, ax=ax_r, fraction=0.04, pad=0.02)
-    bar.outline.set_visible(False)
-    bar.ax.tick_params(labelsize=7.5, length=0)
-    bar.set_label("accepted trials", fontsize=8, color=INK_SOFT)
-    title(ax_r, "Which substitutions actually worked",
-          "Rows and columns are both sorted by row total, so the pale band across the top "
-          "is the postures nothing else satisfied.\nCounts rather than rates, because most "
-          "pairs have single-digit samples.")
-
-    table(shown, out_dir, "fig6_pair_shown")
-    table(accepted, out_dir, "fig6_pair_accepted")
-    return save(fig, out_dir, "fig6_pair_coverage", dpi)
 
 
 def parse_args():
@@ -532,8 +347,7 @@ def main():
     df = load(args.csv)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     print(f"{len(df):,} trials -> {args.out_dir}")
-    for figure in (fig_at_a_glance, fig_trial_matrix, fig_label_cascade,
-                   fig_subject_bias, fig_object_roles, fig_pair_coverage):
+    for figure in (fig_at_a_glance, fig_label_cascade, fig_subject_bias):
         figure(df, args.out_dir, args.dpi)
 
 
