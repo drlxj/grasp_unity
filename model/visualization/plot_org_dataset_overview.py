@@ -25,54 +25,17 @@ import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
 
+# Shared with the 3D viewer, so a figure and a rendered trial agree on what a colour means.
+from org_style import (GRID, INK, INK_SOFT, SURFACE, VERDICT_HEX as VERDICT_COLORS,
+                       VERDICT_LABELS, VERDICTS, style, verdict_of)
+
 # This file lives in model/visualization/; outputs stay in model/outputs/.
 MODEL_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_CSV = MODEL_DIR / "outputs" / "org_dataset" / "trials.csv"
 DEFAULT_OUT = MODEL_DIR / "outputs" / "org_dataset"
 
-# The four verdicts of visualize_collected_data.verdict(), so a figure and a rendered
-# trial agree on what a colour means. The hexes are that script's hues re-stepped for
-# paper white: its values are pre-divided for a renderer running ambient_strength 2.0,
-# and its amber comes out at 2.14:1 against white, under the 3:1 a filled mark needs.
-#
-# Validated as a set (all pairs): CVD Delta-E >= 12.6, normal-vision >= 15.2, contrast
-# >= 3:1. UNSURE is the reserved neutral -- absence of a verdict, not a fifth series --
-# which is why it alone carries no chroma.
-COMPATIBLE = "#2e6fb4"   # oor 1, ir 1
-BLOCKED = "#bf8613"      # oor 1, ir 0 -- judged workable at a distance, then defeated
-INCOMPATIBLE = "#b0392e"  # oor 0
-UNSURE = "#868c96"       # either label is 2
-
-VERDICTS = ["compatible", "wrong orientation", "incompatible", "unsure"]
-VERDICT_COLORS = {"compatible": COMPATIBLE, "wrong orientation": BLOCKED,
-                  "incompatible": INCOMPATIBLE, "unsure": UNSURE}
-VERDICT_LABELS = {
-    "compatible": "compatible  (oor 1, ir 1)",
-    "wrong orientation": "wrong orientation  (oor 1, ir 0)",
-    "incompatible": "incompatible  (oor 0)",
-    "unsure": "unsure  (label 2)",
-}
-
-INK = "#1a1a1a"
-INK_SOFT = "#5c5c5c"
-GRID = "#e4e4e2"
-SURFACE = "#fcfcfb"
-
 # A 2px surface gap between stacked segments, expressed as a linewidth in points.
 SEGMENT_GAP = 1.5
-
-
-def style():
-    plt.rcParams.update({
-        "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
-        "font.family": "DejaVu Sans", "font.size": 9,
-        "text.color": INK, "axes.labelcolor": INK, "axes.titlecolor": INK,
-        "xtick.color": INK_SOFT, "ytick.color": INK_SOFT,
-        "axes.edgecolor": GRID, "axes.linewidth": 0.8,
-        "grid.color": GRID, "grid.linewidth": 0.8, "grid.linestyle": "-",
-        "xtick.major.size": 0, "ytick.major.size": 0,
-        "legend.frameon": False, "axes.spines.top": False, "axes.spines.right": False,
-    })
 
 
 def bare(ax, keep=()):
@@ -128,12 +91,7 @@ def load(csv_path):
     df["sid"] = df.subject.str[1:].astype(int)
     df["subject"] = pd.Categorical(df.subject, categories=[
         f"s{i}" for i in sorted(df.subject.str[1:].astype(int).unique())], ordered=True)
-    df["verdict"] = np.select(
-        [(df.ir_label == 2) | (df.oor_label == 2),
-         (df.oor_label == 1) & (df.ir_label == 1),
-         (df.oor_label == 1)],
-        ["unsure", "compatible", "wrong orientation"],
-        default="incompatible")
+    df["verdict"] = verdict_of(df.oor_label, df.ir_label)
     df["is_target"] = df.trial_index == 0
     return df
 

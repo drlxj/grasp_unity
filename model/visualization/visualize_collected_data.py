@@ -22,6 +22,7 @@ if str(MODEL_DIR) not in sys.path:
 from aitviewer_utils import (build_trial_renderables, cast_shadow_from_camera_side,
                              connect_window_events, frame_camera, place_floor)
 from dataset_utils import load_object_sources, load_trial
+from org_style import BONE_RGBA, JOINT_RGBA, VERDICT_RGBA, verdict_of
 
 ORG_DATASET = MODEL_DIR.parent / "dataset" / "ORG_dataset"
 
@@ -29,24 +30,16 @@ ORG_DATASET = MODEL_DIR.parent / "dataset" / "ORG_dataset"
 # window backend here instead. PyQt6 avoids the PyQt5 resize/_ctx bug on Windows.
 DEFAULT_WINDOW_TYPE = "pyqt6"
 
-# The object carries the verdict, so the hand is kept neutral: a coloured hand next to a
-# coloured object leaves nothing for the eye to anchor on, and a blue hand beside a blue
-# object is worse still. Dark bones, lighter joints, one grey family, no hue of its own.
-BONE_COLOR = (0.26, 0.28, 0.32, 1.0)
-JOINT_COLOR = (0.52, 0.55, 0.60, 1.0)
 JOINT_RADIUS = 0.0065
 BONE_RADIUS = 0.0038
 
-# Blue / amber / red rather than the usual green / red, which is the one pairing that
-# red-green colour blindness collapses. These three also separate by lightness, so they
-# survive being printed in greyscale: amber is light, blue mid, red dark.
-#
-# The values are pre-divided by roughly 1.5: the scene runs at ambient_strength 2.0, and
-# feeding it the colour we actually want back comes out fluorescent.
-COMPATIBLE_COLOR = (0.12, 0.29, 0.47, 1.0)           # ir 1, oor 1
-ORIENTATION_BLOCKED_COLOR = (0.59, 0.43, 0.10, 1.0)  # ir 0, oor 1
-INCOMPATIBLE_COLOR = (0.46, 0.15, 0.12, 1.0)         # ir 0, oor 0
-UNSURE_COLOR = (0.41, 0.41, 0.41, 1.0)               # either label is 2
+# What each verdict (org_style.verdict_of) is called when a trial is described.
+VERDICT_DESCRIPTIONS = {
+    "compatible": "compatible",
+    "wrong orientation": "judged compatible, but not in this orientation",
+    "incompatible": "not compatible",
+    "unsure": "not sure",
+}
 
 # One fixed viewpoint for every trial, so that figures put side by side can be read
 # without working out which way each hand is facing first.
@@ -76,30 +69,17 @@ KEY_LIGHT_ELEVATION_DEG = 60.0
 
 
 def verdict(trial):
-    """
-    How the participant's gesture and this object were judged, as (colour, description).
-
-    Both labels are recorded once for the whole trial, not per frame, but they come from
-    two different moments: oorLabel is the spoken judgement made while the object was
-    still out of reach, irLabel whether the grasp actually worked once it was in reach.
-    The pair (0, 1) is the interesting one -- judged workable, then defeated by the
-    object's orientation -- and it is why this is three-way and not a yes/no.
-    """
-    ir, oor = trial.ir_label, trial.oor_label
-    if ir == 2 or oor == 2:
-        return UNSURE_COLOR, "not sure"
-    if ir == 1 and oor == 1:
-        return COMPATIBLE_COLOR, "compatible"
-    if oor == 1:
-        return ORIENTATION_BLOCKED_COLOR, "judged compatible, but not in this orientation"
-    return INCOMPATIBLE_COLOR, "not compatible"
+    """How the participant's gesture and this object were judged, as (colour, description)."""
+    name = verdict_of(trial.oor_label, trial.ir_label)
+    return VERDICT_RGBA[name], VERDICT_DESCRIPTIONS[name]
 
 
-def build_renderables(trial):
-    """The hand and object nodes for one trial, in this viewer's palette."""
-    color, _ = verdict(trial)
+def build_renderables(trial, object_color=None):
+    """The hand and object nodes for one trial; the object takes its verdict's colour."""
+    if object_color is None:
+        object_color, _ = verdict(trial)
     return build_trial_renderables(
-        trial, object_color=color, joint_color=JOINT_COLOR, bone_color=BONE_COLOR,
+        trial, object_color=object_color, joint_color=JOINT_RGBA, bone_color=BONE_RGBA,
         joint_radius=JOINT_RADIUS, bone_radius=BONE_RADIUS,
     )
 

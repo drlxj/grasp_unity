@@ -162,7 +162,7 @@ def contact_sheet(tiles, out_path, ncols, dpi):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from plot_org_dataset_overview import INK, INK_SOFT, SURFACE, style
+    from org_style import INK, INK_SOFT, SURFACE, style
 
     style()
     nrows = int(np.ceil(len(tiles) / ncols))
