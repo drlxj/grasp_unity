@@ -74,12 +74,11 @@ def verdict(trial):
     return VERDICT_RGBA[name], VERDICT_DESCRIPTIONS[name]
 
 
-def build_renderables(trial, object_color=None):
-    """The hand and object nodes for one trial; the object takes its verdict's colour."""
-    if object_color is None:
-        object_color, _ = verdict(trial)
+def build_renderables(trial):
+    """The hand and object nodes for one trial, in this viewer's palette."""
+    color, _ = verdict(trial)
     return build_trial_renderables(
-        trial, object_color=object_color, joint_color=JOINT_RGBA, bone_color=BONE_RGBA,
+        trial, object_color=color, joint_color=JOINT_RGBA, bone_color=BONE_RGBA,
         joint_radius=JOINT_RADIUS, bone_radius=BONE_RADIUS,
     )
 

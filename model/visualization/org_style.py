@@ -45,10 +45,41 @@ VERDICT_LABELS = {
 BONE_RGBA = (0.26, 0.28, 0.32, 1.0)
 JOINT_RGBA = (0.52, 0.55, 0.60, 1.0)
 
+# The renderer's colours are the paper colours divided by this, for the reason above.
+RENDER_DIM = 1.5
+
+# How far a joint moved between the out-of-reach and the in-reach posture, light (near
+# zero) to dark. One hue, and deliberately not one of the verdict hues, so a moved joint
+# never reads as a judgement. Validated as an ordinal ramp on SURFACE: monotone
+# lightness, every step gap >= 0.06, the light end at 2.64:1. Built for a light surface
+# only -- the dark end sinks into a dark one, as do the hand's own greys.
+OFFSET_RAMP = ["#a592dd", "#8a72d2", "#6f55bf", "#573fa3", "#402d80"]
+OFFSET_MAX_CM = 4.0  # where the ramp tops out; per-joint means run 1.0-3.5 cm
+
 INK = "#1a1a1a"
 INK_SOFT = "#5c5c5c"
 GRID = "#e4e4e2"
 SURFACE = "#fcfcfb"
+
+
+def hex_to_rgba(hex_color, dim=1.0):
+    """A '#rrggbb' as an RGBA tuple in 0-1, optionally divided down for the renderer."""
+    rgb = [int(hex_color[i:i + 2], 16) / 255 / dim for i in (1, 3, 5)]
+    return (*rgb, 1.0)
+
+
+def offset_colormap():
+    """OFFSET_RAMP as a continuous matplotlib colormap over 0..OFFSET_MAX_CM."""
+    from matplotlib.colors import LinearSegmentedColormap
+
+    return LinearSegmentedColormap.from_list("org_offset", OFFSET_RAMP)
+
+
+def offset_rgba(cm):
+    """Renderer colours, (N, 4), for joint offsets given in centimetres."""
+    rgba = offset_colormap()(np.clip(np.asarray(cm) / OFFSET_MAX_CM, 0.0, 1.0))
+    rgba[:, :3] /= RENDER_DIM
+    return rgba
 
 
 def verdict_of(oor_label, ir_label):

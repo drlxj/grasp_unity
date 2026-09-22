@@ -45,32 +45,45 @@ def build_hand_object_renderables(hand_pts, obj_pcl, obj_trans, is_sequence=Fals
 
 # ------------------------------------------------------------------------ trial scenes
 
+def build_hand_renderables(hand_pts, *, joint_color, bone_color, joint_radius, bone_radius, name="Hand"):
+    """
+    Joints and bones for a (T, 21, 3) hand. joint_color is one RGBA or one per joint,
+    (21, 4); bone_color one RGBA or one per edge of HAND_SKELETON_LINES, (20, 4).
+    """
+    from aitviewer.renderables.lines import Lines
+    from aitviewer.renderables.spheres import Spheres
+
+    joints = Spheres(hand_pts, radius=joint_radius, color=joint_color, name=f"{name} joints")
+    bones = Lines(hand_pts[:, _BONE_IDX, :], mode="lines", r_base=bone_radius,
+                  color=bone_color, name=f"{name} bones")
+    return joints, bones
+
+
 def build_trial_renderables(trial, *, object_color, joint_color, bone_color, joint_radius, bone_radius):
     """
     The aitviewer nodes for one dataset_utils.Trial: hand joints, hand bones, object mesh.
 
     Unlike build_hand_object_renderables, the object is its mesh rather than a point cloud.
     """
-    from aitviewer.renderables.lines import Lines
-    from aitviewer.renderables.meshes import Meshes
-    from aitviewer.renderables.spheres import Spheres
+    joints, bones = build_hand_renderables(trial.hand, joint_color=joint_color, bone_color=bone_color,
+                                           joint_radius=joint_radius, bone_radius=bone_radius)
+    return joints, bones, build_object_renderable(trial, object_color)
 
-    hand_pts = trial.hand
-    joints = Spheres(hand_pts, radius=joint_radius, color=joint_color, name="Hand joints")
-    bones = Lines(hand_pts[:, _BONE_IDX, :], mode="lines", r_base=bone_radius,
-                  color=bone_color, name="Hand bones")
+
+def build_object_renderable(trial, color):
+    """The object mesh of a Trial, placed per frame."""
+    from aitviewer.renderables.meshes import Meshes
 
     # Static vertices plus a per-frame 4x4, rather than a full (T, V, 3) vertex sequence:
     # 0.3 MB instead of ~170 MB for a 559-frame trial. aitviewer transposes the matrices
     # itself before upload, so these are plain row-major [[R, t], [0, 1]].
-    obj = Meshes(
+    return Meshes(
         np.asarray(trial.entry["verts"], dtype=np.float32),
         np.asarray(trial.entry["faces"]).astype(np.int32),
         instance_transforms=_object_transforms(trial)[:, np.newaxis],
-        color=object_color,
+        color=color,
         name=trial.object_name,
     )
-    return joints, bones, obj
 
 
 def _object_transforms(trial):
@@ -114,6 +127,17 @@ def frame_camera(camera, trial, azimuth_deg, elevation_deg, *, aspect, safe_area
     almost straight down the line the object travels, so the far object sits near the
     centre of the image and costs far less room than its 1.6 m would suggest.
     """
+    distance = fit_distance(sequence_points(trial), azimuth_deg, elevation_deg,
+                            fov=camera.fov, aspect=aspect, safe_area=safe_area)
+    camera.target = np.zeros(3)
+    camera.position = camera_direction(azimuth_deg, elevation_deg) * distance
+
+
+def fit_distance(points, azimuth_deg, elevation_deg, *, fov, aspect, safe_area):
+    """
+    How far from the origin a camera looking at it from this direction has to sit for
+    every one of `points` (N, 3) to fall inside the central `safe_area` of the frame.
+    """
     direction = camera_direction(azimuth_deg, elevation_deg)
     up = np.array([0.0, 1.0, 0.0])
     right = np.cross(up, direction)
@@ -123,20 +147,17 @@ def frame_camera(camera, trial, azimuth_deg, elevation_deg, *, aspect, safe_area
     # Fit against a frustum shrunk to the safe area, so the padding is the same on screen
     # for a point 10 cm away as for one 1.6 m away. A multiplier on the distance instead
     # barely moves a point that is already far away.
-    tan_v = np.tan(np.radians(camera.fov) / 2.0) * safe_area
+    tan_v = np.tan(np.radians(fov) / 2.0) * safe_area
     tan_h = tan_v * aspect
 
     # For a point q (relative to the target) the camera must sit at least
     # q.direction + |q.screen_axis| / tan(half fov) away for q to fall inside the frustum.
-    q = sequence_points(trial)
+    q = np.asarray(points)
     along = q @ direction
-    distance = max(
+    return max(
         float(np.max(along + np.abs(q @ screen_up) / tan_v)),
         float(np.max(along + np.abs(q @ right) / tan_h)),
     )
-
-    camera.target = np.zeros(3)
-    camera.position = direction * distance
 
 
 def place_floor(scene, trial, *, drop):
