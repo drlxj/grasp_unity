@@ -109,11 +109,16 @@ def sequence_points(trial):
     the mesh stays inside it, so this bounds the object exactly without touching all
     50k vertices on all several hundred frames.
     """
+    return np.vstack([trial.hand.reshape(-1, 3), object_points(trial)])
+
+
+def object_points(trial):
+    """The corners of the object's bounding box on every frame of a trial, (8T, 3)."""
     verts = np.asarray(trial.entry["verts"], dtype=np.float32)
     lo, hi = verts.min(axis=0), verts.max(axis=0)
     corners = np.array(np.meshgrid(*zip(lo, hi))).reshape(3, -1).T  # (8, 3)
     obj = np.einsum("tij,cj->tci", trial.obj_rot, corners) + trial.obj_trans[:, None, :]
-    return np.vstack([trial.hand.reshape(-1, 3), obj.reshape(-1, 3)])
+    return obj.reshape(-1, 3)
 
 
 def frame_camera(camera, trial, azimuth_deg, elevation_deg, *, aspect, safe_area):
