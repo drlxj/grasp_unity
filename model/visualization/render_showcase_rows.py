@@ -9,9 +9,8 @@ Three rows, one claim each (the claims themselves live in the page's HTML, not h
                overlaid with every joint tinted by how far it moved
   negatives    the dataset records grasps that do not work: one frozen posture from one
                session, shown three replacement objects with three different outcomes
-  orientation  how a person grasps follows the object's orientation, in a way set by its
-               shape and function: one participant's grasps of an apple, a banana and a
-               teapot, each at the three orientations it was presented in
+  grasps       one object per cluster of the paper, and down each column the distinct
+               ways it was grasped, participants and orientations pooled
 
 Panels are separate files so the page can lay them out responsively, and each row's
 panels share one camera distance and one crop, so they can sit side by side at one
@@ -23,7 +22,7 @@ picker; --candidates N renders the top N alternatives instead, to choose from.
 
 Usage:
   python render_showcase_rows.py                            # all rows, SHOWCASE picks
-  python render_showcase_rows.py --rows orientation
+  python render_showcase_rows.py --rows grasps
   python render_showcase_rows.py --candidates 4 --rows negatives
 """
 import argparse
@@ -62,17 +61,14 @@ SHOWCASE = {
     # distance, headphones accepted, a game controller accepted and then failed in reach.
     "negatives": dict(rel_path="s10/bowl/20250729_100341/all_trials.json",
                       trials={"oor_no": 1, "oor_yes_ir_yes": 3, "oor_yes_ir_no": 2}),
-    # pick_orientation's top five, in its order; the first also fills the bubbles.
-    "orientation": dict(subjects=["s20", "s17", "s14", "s1", "s19"]),
+    # Set by GRASP_OBJECTS and GRASP_ROWS; the grasps shown are chosen by distinct_grasps.
+    "grasps": None,
 }
 ROWS = tuple(SHOWCASE)
 
-# No symmetry to adapt to / a long axis to follow / a handle to find.
-ORIENTATION_OBJECTS = ("apple", "banana", "teapot")
 # Left to right in the negatives row, as (key, org_style verdict). Named by what was
 # recorded, not by why: the data holds the two judgements, never the reason an object
-# accepted at a distance then failed in reach, and calling that "wrong orientation"
-# would also blur this row into the orientation row below it.
+# accepted at a distance then failed in reach, so it is not called "wrong orientation".
 OUTCOMES = (("oor_no", "incompatible"),
             ("oor_yes_ir_yes", "compatible"),
             ("oor_yes_ir_no", "wrong orientation"))
@@ -83,27 +79,25 @@ FIRST_PERSON = (viz.CAMERA_AZIMUTH_DEG, viz.CAMERA_ELEVATION_DEG)
 # degrees up: the fingers fan out rather than stacking behind one another, and the thumb
 # stays clear of the palm, which a view from straight above hides it under.
 POSE_CAMERA = (138.0, 45.0)
-# The orientation figure: participants as rows; for each object, its three orientations
-# as columns. Every cell is turned about the vertical into the object's own frame, so
-# the object is the same in all of them and the hand arrives from wherever that
-# orientation put it. Seen from high up, so the hand shows over the object from any side.
-ORIENTATION_ROWS = 5
-ORIENTATION_CAMERA = (160.0, 60.0)
-# Neutral rather than a verdict colour: this figure encodes no verdict (every trial in it
-# is a target grasp), and the hands in the bubbles need the colour to tell apart.
-ORIENTATION_OBJECT_HEX = "#c4c0b8"
-# The three orientations' hands in each bubble, keyed to the column chips. The first
-# three categorical slots, which validate all-pairs (worst CVD Delta E 9.2); the aqua is
-# 2.74:1 on the surface, so every colour also carries its number in the header.
-ORIENTATION_HAND_HEX = ("#2a78d6", "#eb6834", "#1baf7a")
+# The grasp figure: one column per object cluster of the paper, headed by a
+# representative object, and one row per distinct way that object was grasped. Every
+# grasp is turned into the object's own frame, so the object is the same down a column.
+# Seen from high up, so the hand shows over the object from any side.
+GRASP_OBJECTS = ("bowl", "mug", "scissors", "camera", "teapot", "banana", "hammer",
+                 "gamecontroller")  # clusters 1-8; cluster 2 could equally be the apple
+GRASP_TITLES = {"gamecontroller": "game controller"}
+GRASP_ROWS = 5
+GRASP_CAMERA = (160.0, 60.0)
+# Neutral rather than a verdict colour: this figure encodes no verdict (every grasp in it
+# is a target grasp).
+GRASP_OBJECT_HEX = "#c4c0b8"
+# The same from every side about the vertical, so grasps are compared side-independently.
+SYMMETRIC_OBJECTS = {"bowl", "apple"}
+CONTACT_CM = 3.0       # a grasp counts only with some joint this close to the surface
+MIN_KIND_SIZE = 2      # a kind of grasp needs this many members to be shown
 CELL_PX = 360          # final width of one grid cell
-GROUP_GAP_PX = 28      # between one object's three columns and the next object's
-ROW_LABEL_PX = 96      # left margin for the participant labels
-HEADER_PX = 132        # top band for object names and column chips
-BUBBLE_CELLS = 1.75    # bubble diameter, in cell widths ...
-BUBBLE_ROWS = 2.2      # ... or in row heights, whichever is smaller: it covers ~two rows
-BUBBLE_TOP_GAP_PX = 10  # bubble top below the header, over the first rows of the grid
-BUBBLE_EDGE = "#b9b9b4"
+COLUMN_GAP_PX = 20
+HEADER_PX = 90         # top band for the object names
 # A session counts as the default orientation when its object is within this much of it.
 DEFAULT_TOLERANCE_DEG = 2.0
 
@@ -177,59 +171,6 @@ def pick_negatives(n):
             seen_targets.add(target)
             picks.append(dict(rel_path=rel_path, trials={k: int(first[v]) for k, v in OUTCOMES}))
     return picks[:n]
-
-
-def pick_orientation(n, sources):
-    """
-    The n participants whose three objects show the contrast most clearly, as one pick
-    for the grid. The contrast: the apple grasp barely turns with the apple, the banana
-    and teapot grasps turn a lot, and the hand comes at the teapot from a different side
-    each time.
-
-    Hand orientation is read off the skeleton (wrist to middle-finger base, and the palm
-    normal), approach direction off where the object sits relative to the wrist. Each
-    measure is ranked across participants and the ranks summed.
-    """
-    rows = []
-    for subject_dir in sorted(p for p in ORG_DATASET.iterdir() if p.is_dir()):
-        row = dict(subject=subject_dir.name)
-        for object_name in ORIENTATION_OBJECTS:
-            stills = [(t, t.ir_frame) for _, t in load_sessions(subject_dir.name, object_name, sources)]
-            turns = pairwise([hand_frame(t.hand[f]) for t, f in stills], rotation_angle)
-            approaches = pairwise([-t.obj_trans[f][[0, 2]] for t, f in stills], planar_angle)
-            row[f"{object_name}_turn"] = np.mean(turns)
-            row[f"{object_name}_approach"] = np.mean(approaches)
-        rows.append(row)
-        print(f"  {subject_dir.name}: " + ", ".join(f"{k} {v:.0f}" for k, v in row.items() if k != "subject"))
-    df = pd.DataFrame(rows)
-    df["score"] = (-df.apple_turn.rank() + df.banana_turn.rank() + df.teapot_turn.rank()
-                   + df.teapot_approach.rank())
-    df = df.sort_values(["score", "subject"], ascending=[False, True])
-    return [dict(subjects=list(df.subject.head(n)))]
-
-
-def hand_frame(hand):
-    """An orthonormal frame for a (21, 3) posture: along the palm, across it, its normal."""
-    along = hand[9] / np.linalg.norm(hand[9])
-    normal = np.cross(hand[5], hand[17])
-    normal -= (normal @ along) * along
-    normal /= np.linalg.norm(normal)
-    return np.stack([along, np.cross(normal, along), normal], axis=1)
-
-
-def rotation_angle(a, b):
-    """Degrees between two rotation matrices."""
-    return float(np.degrees(np.arccos(np.clip((np.trace(a.T @ b) - 1) / 2, -1.0, 1.0))))
-
-
-def planar_angle(a, b):
-    """Degrees between two 2D directions."""
-    cos = a @ b / (np.linalg.norm(a) * np.linalg.norm(b))
-    return float(np.degrees(np.arccos(np.clip(cos, -1.0, 1.0))))
-
-
-def pairwise(items, measure):
-    return [measure(items[i], items[j]) for i in range(len(items)) for j in range(i + 1, len(items))]
 
 
 # --------------------------------------------------------------------------- scenes
@@ -433,93 +374,75 @@ def row_negatives(renderer, pick, sources, out_dir):
     return manifest
 
 
-def row_orientation(renderer, pick, sources, out_dir):
+def row_grasps(renderer, pick, sources, out_dir):
     """
-    Participants by (object, orientation), every cell in the object's own frame.
+    One column per object, one row per distinct way it was grasped.
 
-    Each participant grasped each object at three orientations: the object's default,
-    shared by everyone, and two turned about the vertical by amounts that vary between
-    participants. Turning each trial back -- hand and object together, about the
-    object's centre -- leaves the object identical in every cell and moves the hand to
-    wherever that orientation put it relative to the object. Column 1 of each object is
-    the default orientation, 2 and 3 the turned ones in order of turn. All at the in-reach
-    keyframe, where the grasp is complete, and at one camera distance, so hands compare
-    in size across the whole grid.
-
-    One bubble per object overlays the first participant's three hands in the colours of
-    the column chips, over the top of the grid.
+    Every participant's in-reach grasp of the object, at all three orientations, is
+    turned into the object's own frame (in_object_frame), so the object is identical
+    down its column and the hands differ only in how and where they hold it. Those
+    grasps are grouped into kinds (distinct_grasps) and each row shows the most typical
+    member of one kind, the commonest kind on top. Neither participant nor orientation is
+    shown: the rows mix both. Each column is framed on its own, so hands compare in size
+    down a column but not across columns.
     """
-    subjects = pick["subjects"]
+    objects, n_rows = pick["objects"], pick["rows"]
     slots = slot_dir(out_dir)
-    object_color = hex_to_rgba(ORIENTATION_OBJECT_HEX, RENDER_DIM)
+    object_color = hex_to_rgba(GRASP_OBJECT_HEX, RENDER_DIM)
+    camera = GRASP_CAMERA
 
-    cells = {}  # (subject, object, column) -> dict(path, trial, yaw, still)
-    for object_name in ORIENTATION_OBJECTS:
-        sessions = {s: load_sessions(s, object_name, sources) for s in subjects}
-        reference = default_orientation(object_name, sessions)
-        for subject, trials in sessions.items():
-            row = []
-            for path, trial in trials:
-                rot = trial.obj_rot[trial.ir_frame]
-                row.append(dict(path=path, trial=trial, yaw=yaw_between(reference, rot),
-                                still=in_object_frame(trial, trial.ir_frame, reference)))
-            # The default first, then the two turned orientations by how far they turned.
-            row.sort(key=lambda c: (abs(c["yaw"]) > DEFAULT_TOLERANCE_DEG, c["yaw"]))
-            for k, cell in enumerate(row, start=1):
-                cells[subject, object_name, k] = cell
-            print(f"  orientation: {subject:<4} {object_name:<7} turned "
-                  + ", ".join(f"{c['yaw']:+.0f}" for c in row))
+    columns, manifest = [], []
+    for object_name in objects:
+        grasps = [g for g in object_grasps(object_name, sources) if in_contact(g["still"])]
+        chosen = distinct_grasps(grasps, n_rows, symmetric=object_name in SYMMETRIC_OBJECTS)
+        distance = max(distance_for(renderer, aitviewer_utils.sequence_points(g["still"]), camera)
+                       for g, _ in chosen)
+        pngs = []
+        for r, (grasp, share) in enumerate(chosen, start=1):
+            png = slots / f"row3_{object_name}_{r}.png"
+            still = grasp["still"]
+            shoot(renderer, (*hand_nodes(still.hand[0]),
+                             aitviewer_utils.build_object_renderable(still, object_color)),
+                  png, distance, camera)
+            pngs.append(png)
+            manifest.append(dict(panel="row3_grasps_grid.png", caption=f"{object_name} {r}",
+                                 subject=grasp["subject"], share_of_grasps=round(share, 3),
+                                 **provenance(grasp["path"], 0, grasp["trial"])))
+        thumbs.common_crop(pngs)
+        columns.append((GRASP_TITLES.get(object_name, object_name), pngs))
+        print(f"  grasps: {object_name:<15} {len(grasps)} grasps in contact; rows cover "
+              + ", ".join(f"{share:.0%}" for _, share in chosen))
 
-    # One camera distance and one crop per object: within an object's fifteen cells the
-    # hands compare in size, and the apple is not shrunk to leave room for the teapot.
-    camera = ORIENTATION_CAMERA
-    for object_name in ORIENTATION_OBJECTS:
-        group = [c for (_, o, _), c in cells.items() if o == object_name]
-        distance = max(distance_for(renderer, aitviewer_utils.sequence_points(c["still"]), camera)
-                       for c in group)
-        for (subject, o, k), cell in cells.items():
-            if o != object_name:
-                continue
-            cell["png"] = slots / f"row3_{subject}_{object_name}_{k}.png"
-            still = cell["still"]
-            nodes = (*hand_nodes(still.hand[0]),
-                     aitviewer_utils.build_object_renderable(still, object_color))
-            shoot(renderer, nodes, cell["png"], distance, camera)
-        thumbs.common_crop([c["png"] for c in group])
+    compose_grasp_grid(out_dir / "row3_grasps_grid.png", columns)
+    return manifest
 
-    bubbles = {}
-    for object_name in ORIENTATION_OBJECTS:
-        stills = [cells[subjects[0], object_name, k]["still"] for k in (1, 2, 3)]
-        nodes = [aitviewer_utils.build_object_renderable(stills[0], object_color)]
-        for still, hex_color in zip(stills, ORIENTATION_HAND_HEX):
-            # Undimmed: thin bones shade darker than a mesh face, and at RENDER_DIM the
-            # three hues sink to navy, brown and bottle green.
-            rgba = hex_to_rgba(hex_color)
-            nodes += hand_nodes(still.hand[0], joint_color=rgba, bone_color=rgba)
-        points = np.vstack([aitviewer_utils.sequence_points(s) for s in stills])
-        bubbles[object_name] = slots / f"row3_bubble_{object_name}.png"
-        shoot(renderer, nodes, bubbles[object_name], distance_for(renderer, points, camera), camera)
 
-    png = out_dir / "row3_orientation_grid.png"
-    compose_orientation_grid(png, cells, bubbles, subjects)
-    return [dict(panel=png.name, caption=f"P{subjects.index(s) + 1} {o} {k}",
-                 subject=s, yaw_from_default=round(c["yaw"]),
-                 **provenance(c["path"], 0, c["trial"]))
-            for (s, o, k), c in cells.items()]
+def object_grasps(object_name, sources):
+    """Every participant's in-reach grasp of the object, in its default orientation's frame."""
+    subjects = sorted(p.name for p in ORG_DATASET.iterdir() if p.is_dir())
+    sessions = {s: load_sessions(s, object_name, sources) for s in subjects}
+    reference = default_orientation(object_name, sessions)
+    return [dict(path=path, trial=trial, subject=subject,
+                 still=in_object_frame(trial, trial.ir_frame, reference))
+            for subject, trials in sessions.items() for path, trial in trials]
 
 
 def default_orientation(object_name, sessions):
     """
-    The object's default orientation: the one every participant was shown. Each of
-    them saw it once, alongside two orientations turned by amounts of their own, so it is
-    the only rotation that recurs in every participant's sessions.
+    The object's default orientation: the one (nearly) every participant was shown. Each
+    saw it once, alongside two orientations turned by amounts of their own, so it is the
+    rotation that recurs across participants -- in all of them for most objects, in 18
+    of 19 for the bowl. Any common orientation would serve as the frame, since all of
+    them differ only in yaw; the default is simply the natural one to show.
     """
     rotations = {s: [t.obj_rot[t.ir_frame] for _, t in trials] for s, trials in sessions.items()}
-    first, *others = rotations.values()
-    for candidate in first:
-        if all(any(abs(yaw_between(candidate, r)) < DEFAULT_TOLERANCE_DEG for r in rs) for rs in others):
-            return candidate
-    sys.exit(f"No orientation of the {object_name} is shared by {', '.join(sessions)}")
+    candidates = [r for rs in rotations.values() for r in rs]
+    shared = [sum(any(abs(yaw_between(c, r)) < DEFAULT_TOLERANCE_DEG for r in rs) for rs in rotations.values())
+              for c in candidates]
+    best = int(np.argmax(shared))
+    if shared[best] <= len(rotations) / 2:
+        sys.exit(f"No orientation of the {object_name} is shared by most of {', '.join(sessions)}")
+    return candidates[best]
 
 
 def in_object_frame(trial, frame, reference):
@@ -535,82 +458,84 @@ def in_object_frame(trial, frame, reference):
                           obj_trans=((trial.obj_trans[frame] - centre) @ turn.T)[np.newaxis])
 
 
-def compose_orientation_grid(path, cells, bubbles, subjects):
+def in_contact(still):
     """
-    The grid: object names and numbered colour chips on top, one row per participant
-    (P1..., anonymised), the three objects' column groups separated by a gap and a rule,
-    and the bubbles laid over the top rows of each group.
+    Whether the hand touches the object: some joint within CONTACT_CM of its surface.
+    Skeleton joints sit inside the finger, so a grasp never quite reaches zero; a hand
+    further off than this is a tracking fault or a grasp that was never closed.
     """
-    from PIL import Image, ImageDraw, ImageFilter
+    from scipy.spatial import cKDTree
 
-    # Each object's cells were cropped on their own; one cell height fits the tallest.
-    cell_h = max(round(Image.open(c["png"]).height * CELL_PX / Image.open(c["png"]).width)
-                 for c in cells.values())
-    group_w = 3 * CELL_PX
-    width = ROW_LABEL_PX + 3 * group_w + 2 * GROUP_GAP_PX + PANEL_MARGIN
-    height = HEADER_PX + len(subjects) * cell_h + PANEL_MARGIN
+    verts = np.asarray(still.entry["verts"])
+    surface = verts @ still.obj_rot[0].T + still.obj_trans[0]
+    nearest, _ = cKDTree(surface).query(still.hand[0])
+    return nearest.min() * 100 < CONTACT_CM
+
+
+def grasp_descriptor(still, symmetric):
+    """
+    The hand's joints in the object's frame, (21, 3). For an object that is the same from
+    every side, the hand is first swung round the vertical to one common side, so that
+    the same grasp taken from two sides counts as the same grasp.
+    """
+    hand = still.hand[0]
+    if symmetric:
+        angle = -np.arctan2(hand[0, 0], hand[0, 2])  # bring the wrist to azimuth 0
+        c, s = np.cos(angle), np.sin(angle)
+        hand = hand @ np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]]).T
+    return hand
+
+
+def distinct_grasps(grasps, n, *, symmetric):
+    """
+    The n commonest kinds of grasp, as (most typical member, share of all grasps).
+
+    Grasps are compared by mean joint distance in the object's frame and grouped by
+    average-linkage clustering, cut at the fewest clusters that yield n kinds of at least
+    MIN_KIND_SIZE members -- a grasp nobody else made is more likely a tracking fault than
+    a way of holding the object. Each kind is shown by its medoid, the member closest on
+    average to the rest, rather than an average hand, which would be no one's grasp.
+    """
+    from scipy.cluster.hierarchy import fcluster, linkage
+    from scipy.spatial.distance import squareform
+
+    X = np.stack([grasp_descriptor(g["still"], symmetric) for g in grasps])
+    D = np.linalg.norm(X[:, None] - X[None], axis=-1).mean(axis=-1)
+    tree = linkage(squareform(D, checks=False), method="average")
+    for cut in range(n, len(grasps) + 1):
+        labels = fcluster(tree, t=cut, criterion="maxclust")
+        kinds = [np.flatnonzero(labels == k) for k in np.unique(labels)]
+        kinds = sorted((k for k in kinds if len(k) >= MIN_KIND_SIZE), key=len, reverse=True)
+        if len(kinds) >= n:
+            break
+    chosen = []
+    for members in kinds[:n]:
+        medoid = members[np.argmin(D[np.ix_(members, members)].sum(axis=1))]
+        chosen.append((grasps[medoid], len(members) / len(grasps)))
+    return chosen
+
+
+def compose_grasp_grid(path, columns):
+    """The grid: object names on top, then each column's renders, all cells one size."""
+    from PIL import Image, ImageDraw
+
+    sizes = [Image.open(png).size for _, pngs in columns for png in pngs]
+    cell_h = max(round(h * CELL_PX / w) for w, h in sizes)
+    n_rows = max(len(pngs) for _, pngs in columns)
+    width = 2 * PANEL_MARGIN + len(columns) * CELL_PX + (len(columns) - 1) * COLUMN_GAP_PX
+    height = HEADER_PX + n_rows * cell_h + PANEL_MARGIN
     canvas = Image.new("RGB", (width, height), SURFACE)
     draw = ImageDraw.Draw(canvas)
-
-    def column_x(g, k):  # left edge of object group g's column k (1-based)
-        return ROW_LABEL_PX + g * (group_w + GROUP_GAP_PX) + (k - 1) * CELL_PX
-
-    for g, object_name in enumerate(ORIENTATION_OBJECTS):
-        draw.text((column_x(g, 1) + group_w // 2, 40), object_name, font=font(44), fill=INK, anchor="mm")
-        for k, hex_color in enumerate(ORIENTATION_HAND_HEX, start=1):
-            cx, cy = column_x(g, k) + CELL_PX // 2, HEADER_PX - 36
-            draw.ellipse((cx - 30, cy - 12, cx - 6, cy + 12), fill=hex_color)
-            draw.text((cx + 2, cy), str(k), font=font(LABEL_PX), fill=INK_SOFT, anchor="lm")
-        if g:
-            x = column_x(g, 1) - GROUP_GAP_PX // 2
-            draw.line((x, HEADER_PX, x, height - PANEL_MARGIN), fill=SLOT_EDGE, width=3)
-    for r, subject in enumerate(subjects):
-        top = HEADER_PX + r * cell_h
-        draw.text((ROW_LABEL_PX // 2, top + cell_h // 2), f"P{r + 1}", font=font(LABEL_PX),
-                  fill=INK_SOFT, anchor="mm")
-        for g, object_name in enumerate(ORIENTATION_OBJECTS):
-            for k in (1, 2, 3):
-                image = Image.open(cells[subject, object_name, k]["png"]).convert("RGB")
-                image.thumbnail((CELL_PX, cell_h), Image.LANCZOS)
-                canvas.paste(image, (column_x(g, k) + (CELL_PX - image.width) // 2,
-                                     top + (cell_h - image.height) // 2))
-
-    diameter = round(min(BUBBLE_CELLS * CELL_PX, BUBBLE_ROWS * cell_h))
-    for g, object_name in enumerate(ORIENTATION_OBJECTS):
-        bubble = circular_crop(Image.open(bubbles[object_name]).convert("RGB"), diameter)
-        left = column_x(g, 2) + CELL_PX // 2 - diameter // 2
-        top = HEADER_PX + BUBBLE_TOP_GAP_PX
-        # A soft shadow under the bubble, so it reads as lying on top of the grid.
-        shadow = Image.new("L", canvas.size, 0)
-        ImageDraw.Draw(shadow).ellipse((left, top + 10, left + diameter, top + diameter + 10), fill=70)
-        shadow = shadow.filter(ImageFilter.GaussianBlur(14))
-        canvas.paste(Image.new("RGB", canvas.size, INK), mask=shadow)
-        mask = Image.new("L", (diameter, diameter), 0)
-        ImageDraw.Draw(mask).ellipse((0, 0, diameter - 1, diameter - 1), fill=255)
-        canvas.paste(bubble, (left, top), mask=mask)
-        draw.ellipse((left, top, left + diameter - 1, top + diameter - 1), outline=BUBBLE_EDGE, width=5)
-        draw.text((left + diameter // 2, top + diameter - 40), "P1, all three", font=font(28),
-                  fill=INK_SOFT, anchor="mm")
+    for c, (title, pngs) in enumerate(columns):
+        left = PANEL_MARGIN + c * (CELL_PX + COLUMN_GAP_PX)
+        draw.text((left + CELL_PX // 2, HEADER_PX // 2), title, font=font(40), fill=INK, anchor="mm")
+        for r, png in enumerate(pngs):
+            image = Image.open(png).convert("RGB")
+            image.thumbnail((CELL_PX, cell_h), Image.LANCZOS)
+            top = HEADER_PX + r * cell_h
+            canvas.paste(image, (left + (CELL_PX - image.width) // 2, top + (cell_h - image.height) // 2))
     canvas.save(path)
-    print(f"  orientation grid: {width}x{height} px, {len(cells)} cells")
-
-
-def circular_crop(image, diameter):
-    """
-    A square around the image centre -- where the camera's target, the object's centre,
-    lands -- just large enough to hold everything drawn, scaled to `diameter`.
-    """
-    from PIL import Image
-
-    pixels = np.asarray(image).astype(int)
-    ink = np.abs(pixels - pixels[0, 0]).max(axis=-1) > 8
-    ys, xs = np.nonzero(ink)
-    cy, cx = image.height / 2, image.width / 2
-    radius = int(np.sqrt((ys - cy) ** 2 + (xs - cx) ** 2).max() * 1.08) + 8
-    # Pad with the background rather than crop, which would fill any overhang with black.
-    square = Image.new("RGB", (2 * radius, 2 * radius), tuple(int(v) for v in pixels[0, 0]))
-    square.paste(image, (radius - int(cx), radius - int(cy)))
-    return square.resize((diameter, diameter), Image.LANCZOS)
+    print(f"  grasps grid: {width}x{height} px, {len(columns)} objects x {n_rows} grasps")
 
 
 # --------------------------------------------------------------------------- panels
@@ -765,7 +690,7 @@ def preview(path, grid, *, col_labels, row_labels, note):
 
 # --------------------------------------------------------------------------- main
 
-ROW_FUNCTIONS = {"pose_gap": row_pose_gap, "negatives": row_negatives, "orientation": row_orientation}
+ROW_FUNCTIONS = {"pose_gap": row_pose_gap, "negatives": row_negatives, "grasps": row_grasps}
 
 
 def picks_for(row, n, sources):
@@ -773,7 +698,8 @@ def picks_for(row, n, sources):
         return pick_pose_gap(n)
     if row == "negatives":
         return pick_negatives(n)
-    return pick_orientation(ORIENTATION_ROWS, sources)  # one grid; n does not apply
+    # One grid; n asks for that many grasps per object, to look beyond the ones shown.
+    return [dict(objects=GRASP_OBJECTS, rows=max(n, GRASP_ROWS))]
 
 
 def parse_args():
