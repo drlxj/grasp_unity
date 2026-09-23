@@ -44,8 +44,8 @@ import dataset_utils
 import render_org_dataset_thumbnails as thumbs
 import visualize_collected_data as viz
 from compute_pose_offsets import FINGERTIPS
-from org_style import (BONE_RGBA, INK, INK_SOFT, JOINT_RGBA, OFFSET_MAX_CM, SURFACE, VERDICT_HEX,
-                       hex_to_rgba, offset_colormap, offset_rgba, style, verdict_of)
+from org_style import (BONE_RGBA, INK, INK_SOFT, JOINT_RGBA, OFFSET_MAX_CM, RENDER_DIM, SURFACE,
+                       VERDICT_HEX, hex_to_rgba, offset_colormap, offset_rgba, style, verdict_of)
 
 ORG_DATASET = viz.ORG_DATASET
 TRIALS_CSV = MODEL_DIR / "outputs" / "org_dataset" / "trials.csv"
@@ -62,9 +62,8 @@ SHOWCASE = {
     # distance, headphones accepted, a game controller accepted and then failed in reach.
     "negatives": dict(rel_path="s10/bowl/20250729_100341/all_trials.json",
                       trials={"oor_no": 1, "oor_yes_ir_yes": 3, "oor_yes_ir_no": 2}),
-    # pick_orientation's first choice: apple 9 degrees of hand turn across its three
-    # orientations, banana 94, teapot 75 with the approach swinging round by 108.
-    "orientation": dict(subject="s20"),
+    # pick_orientation's top five, in its order; the first also fills the bubbles.
+    "orientation": dict(subjects=["s20", "s17", "s14", "s1", "s19"]),
 }
 ROWS = tuple(SHOWCASE)
 
@@ -84,10 +83,29 @@ FIRST_PERSON = (viz.CAMERA_AZIMUTH_DEG, viz.CAMERA_ELEVATION_DEG)
 # degrees up: the fingers fan out rather than stacking behind one another, and the thumb
 # stays clear of the palm, which a view from straight above hides it under.
 POSE_CAMERA = (138.0, 45.0)
-# Per-panel exceptions in the orientation row, keyed (object, column). The teapot at its
-# third orientation has its handle at the back, and from first person the pot hides the
-# hand reaching over it; from higher up the hand shows above the lid.
-ORIENTATION_CAMERAS = {("teapot", 3): (FIRST_PERSON[0], 60.0)}
+# The orientation figure: participants as rows; for each object, its three orientations
+# as columns. Every cell is turned about the vertical into the object's own frame, so
+# the object is the same in all of them and the hand arrives from wherever that
+# orientation put it. Seen from high up, so the hand shows over the object from any side.
+ORIENTATION_ROWS = 5
+ORIENTATION_CAMERA = (160.0, 60.0)
+# Neutral rather than a verdict colour: this figure encodes no verdict (every trial in it
+# is a target grasp), and the hands in the bubbles need the colour to tell apart.
+ORIENTATION_OBJECT_HEX = "#c4c0b8"
+# The three orientations' hands in each bubble, keyed to the column chips. The first
+# three categorical slots, which validate all-pairs (worst CVD Delta E 9.2); the aqua is
+# 2.74:1 on the surface, so every colour also carries its number in the header.
+ORIENTATION_HAND_HEX = ("#2a78d6", "#eb6834", "#1baf7a")
+CELL_PX = 360          # final width of one grid cell
+GROUP_GAP_PX = 28      # between one object's three columns and the next object's
+ROW_LABEL_PX = 96      # left margin for the participant labels
+HEADER_PX = 132        # top band for object names and column chips
+BUBBLE_CELLS = 1.75    # bubble diameter, in cell widths ...
+BUBBLE_ROWS = 2.2      # ... or in row heights, whichever is smaller: it covers ~two rows
+BUBBLE_TOP_GAP_PX = 10  # bubble top below the header, over the first rows of the grid
+BUBBLE_EDGE = "#b9b9b4"
+# A session counts as the default orientation when its object is within this much of it.
+DEFAULT_TOLERANCE_DEG = 2.0
 
 # The two-slot panels of the posture and negatives rows: the object's place 2 m away
 # above, the space within reach below, at identical positions in every panel of a row.
@@ -163,9 +181,10 @@ def pick_negatives(n):
 
 def pick_orientation(n, sources):
     """
-    Participants whose three objects show the contrast most clearly: the apple grasp
-    barely turns with the apple, the banana and teapot grasps turn a lot, and the hand
-    comes at the teapot from a different side each time.
+    The n participants whose three objects show the contrast most clearly, as one pick
+    for the grid. The contrast: the apple grasp barely turns with the apple, the banana
+    and teapot grasps turn a lot, and the hand comes at the teapot from a different side
+    each time.
 
     Hand orientation is read off the skeleton (wrist to middle-finger base, and the palm
     normal), approach direction off where the object sits relative to the wrist. Each
@@ -186,7 +205,7 @@ def pick_orientation(n, sources):
     df["score"] = (-df.apple_turn.rank() + df.banana_turn.rank() + df.teapot_turn.rank()
                    + df.teapot_approach.rank())
     df = df.sort_values(["score", "subject"], ascending=[False, True])
-    return [dict(subject=s) for s in df.subject.head(n)]
+    return [dict(subjects=list(df.subject.head(n)))]
 
 
 def hand_frame(hand):
@@ -416,51 +435,182 @@ def row_negatives(renderer, pick, sources, out_dir):
 
 def row_orientation(renderer, pick, sources, out_dir):
     """
-    Three objects by the three orientations each was presented in, same participant.
+    Participants by (object, orientation), every cell in the object's own frame.
 
-    The in-reach keyframe, where the grasp is complete. The camera looks at the object
-    rather than the wrist: the point is where the hand arrives around a fixed object,
-    and a wrist-centred camera would instead hold the hand still and swing the object.
-    Each object's orientations run left to right in order of how far it is turned from
-    its first session; one camera distance serves all nine panels, so sizes compare.
-    Panels listed in ORIENTATION_CAMERAS are seen from their own direction.
+    Each participant grasped each object at three orientations: the object's default,
+    shared by everyone, and two turned about the vertical by amounts that vary between
+    participants. Turning each trial back -- hand and object together, about the
+    object's centre -- leaves the object identical in every cell and moves the hand to
+    wherever that orientation put it relative to the object. Column 1 of each object is
+    the default orientation, 2 and 3 the turned ones in order of turn. All at the in-reach
+    keyframe, where the grasp is complete, and at one camera distance, so hands compare
+    in size across the whole grid.
+
+    One bubble per object overlays the first participant's three hands in the colours of
+    the column chips, over the top of the grid.
     """
-    subject = pick["subject"]
-    grid = []
-    for object_name in ORIENTATION_OBJECTS:
-        sessions = load_sessions(subject, object_name, sources)
-        first = sessions[0][1]
-        base = first.obj_rot[first.ir_frame]
-        cells = []
-        for path, trial in sessions:
-            frame = trial.ir_frame
-            cells.append(dict(path=path, trial=trial,
-                              yaw=yaw_between(base, trial.obj_rot[frame]),
-                              still=at_frame(trial, frame, origin=object_centre(trial, frame))))
-        cells.sort(key=lambda c: c["yaw"])
-        for k, cell in enumerate(cells, start=1):
-            cell["camera"] = ORIENTATION_CAMERAS.get((object_name, k), FIRST_PERSON)
-        grid.append(cells)
-    distance = max(distance_for(renderer, aitviewer_utils.sequence_points(c["still"]), c["camera"])
-                   for row in grid for c in row)
+    subjects = pick["subjects"]
+    slots = slot_dir(out_dir)
+    object_color = hex_to_rgba(ORIENTATION_OBJECT_HEX, RENDER_DIM)
 
-    manifest = []
-    for object_name, row in zip(ORIENTATION_OBJECTS, grid):
-        for k, cell in enumerate(row, start=1):
-            png = out_dir / f"row3_orientation_{object_name}_{k}.png"
-            shoot(renderer, viz.build_renderables(cell["still"]), png, distance, cell["camera"])
-            manifest.append(dict(panel=png.name, caption=f"{object_name} {k}",
-                                 yaw_from_first=round(cell["yaw"]),
-                                 camera="{:g},{:g}".format(*cell["camera"]),
-                                 **provenance(cell["path"], 0, cell["trial"])))
-        print(f"  orientation: {subject} {object_name:<7} yaws "
-              + ", ".join(f"{c['yaw']:+.0f}" for c in row))
-    thumbs.common_crop([out_dir / m["panel"] for m in manifest])
-    preview(out_dir / "row3_orientation_preview.png",
-            [[out_dir / f"row3_orientation_{o}_{k}.png" for k in (1, 2, 3)] for o in ORIENTATION_OBJECTS],
-            col_labels=["orientation 1", "orientation 2", "orientation 3"],
-            row_labels=list(ORIENTATION_OBJECTS), note=f"participant {subject}")
-    return manifest
+    cells = {}  # (subject, object, column) -> dict(path, trial, yaw, still)
+    for object_name in ORIENTATION_OBJECTS:
+        sessions = {s: load_sessions(s, object_name, sources) for s in subjects}
+        reference = default_orientation(object_name, sessions)
+        for subject, trials in sessions.items():
+            row = []
+            for path, trial in trials:
+                rot = trial.obj_rot[trial.ir_frame]
+                row.append(dict(path=path, trial=trial, yaw=yaw_between(reference, rot),
+                                still=in_object_frame(trial, trial.ir_frame, reference)))
+            # The default first, then the two turned orientations by how far they turned.
+            row.sort(key=lambda c: (abs(c["yaw"]) > DEFAULT_TOLERANCE_DEG, c["yaw"]))
+            for k, cell in enumerate(row, start=1):
+                cells[subject, object_name, k] = cell
+            print(f"  orientation: {subject:<4} {object_name:<7} turned "
+                  + ", ".join(f"{c['yaw']:+.0f}" for c in row))
+
+    # One camera distance and one crop per object: within an object's fifteen cells the
+    # hands compare in size, and the apple is not shrunk to leave room for the teapot.
+    camera = ORIENTATION_CAMERA
+    for object_name in ORIENTATION_OBJECTS:
+        group = [c for (_, o, _), c in cells.items() if o == object_name]
+        distance = max(distance_for(renderer, aitviewer_utils.sequence_points(c["still"]), camera)
+                       for c in group)
+        for (subject, o, k), cell in cells.items():
+            if o != object_name:
+                continue
+            cell["png"] = slots / f"row3_{subject}_{object_name}_{k}.png"
+            still = cell["still"]
+            nodes = (*hand_nodes(still.hand[0]),
+                     aitviewer_utils.build_object_renderable(still, object_color))
+            shoot(renderer, nodes, cell["png"], distance, camera)
+        thumbs.common_crop([c["png"] for c in group])
+
+    bubbles = {}
+    for object_name in ORIENTATION_OBJECTS:
+        stills = [cells[subjects[0], object_name, k]["still"] for k in (1, 2, 3)]
+        nodes = [aitviewer_utils.build_object_renderable(stills[0], object_color)]
+        for still, hex_color in zip(stills, ORIENTATION_HAND_HEX):
+            # Undimmed: thin bones shade darker than a mesh face, and at RENDER_DIM the
+            # three hues sink to navy, brown and bottle green.
+            rgba = hex_to_rgba(hex_color)
+            nodes += hand_nodes(still.hand[0], joint_color=rgba, bone_color=rgba)
+        points = np.vstack([aitviewer_utils.sequence_points(s) for s in stills])
+        bubbles[object_name] = slots / f"row3_bubble_{object_name}.png"
+        shoot(renderer, nodes, bubbles[object_name], distance_for(renderer, points, camera), camera)
+
+    png = out_dir / "row3_orientation_grid.png"
+    compose_orientation_grid(png, cells, bubbles, subjects)
+    return [dict(panel=png.name, caption=f"P{subjects.index(s) + 1} {o} {k}",
+                 subject=s, yaw_from_default=round(c["yaw"]),
+                 **provenance(c["path"], 0, c["trial"]))
+            for (s, o, k), c in cells.items()]
+
+
+def default_orientation(object_name, sessions):
+    """
+    The object's default orientation: the one every participant was shown. Each of
+    them saw it once, alongside two orientations turned by amounts of their own, so it is
+    the only rotation that recurs in every participant's sessions.
+    """
+    rotations = {s: [t.obj_rot[t.ir_frame] for _, t in trials] for s, trials in sessions.items()}
+    first, *others = rotations.values()
+    for candidate in first:
+        if all(any(abs(yaw_between(candidate, r)) < DEFAULT_TOLERANCE_DEG for r in rs) for rs in others):
+            return candidate
+    sys.exit(f"No orientation of the {object_name} is shared by {', '.join(sessions)}")
+
+
+def in_object_frame(trial, frame, reference):
+    """
+    One frame of a trial turned about the vertical so the object sits at `reference`,
+    centred on the origin, with the hand carried round with it.
+    """
+    rot = trial.obj_rot[frame]
+    turn = reference @ rot.T  # a turn about the vertical: the presets differ only in yaw
+    centre = object_centre(trial, frame)
+    return trial._replace(hand=((trial.hand[frame] - centre) @ turn.T)[np.newaxis],
+                          obj_rot=reference[np.newaxis],
+                          obj_trans=((trial.obj_trans[frame] - centre) @ turn.T)[np.newaxis])
+
+
+def compose_orientation_grid(path, cells, bubbles, subjects):
+    """
+    The grid: object names and numbered colour chips on top, one row per participant
+    (P1..., anonymised), the three objects' column groups separated by a gap and a rule,
+    and the bubbles laid over the top rows of each group.
+    """
+    from PIL import Image, ImageDraw, ImageFilter
+
+    # Each object's cells were cropped on their own; one cell height fits the tallest.
+    cell_h = max(round(Image.open(c["png"]).height * CELL_PX / Image.open(c["png"]).width)
+                 for c in cells.values())
+    group_w = 3 * CELL_PX
+    width = ROW_LABEL_PX + 3 * group_w + 2 * GROUP_GAP_PX + PANEL_MARGIN
+    height = HEADER_PX + len(subjects) * cell_h + PANEL_MARGIN
+    canvas = Image.new("RGB", (width, height), SURFACE)
+    draw = ImageDraw.Draw(canvas)
+
+    def column_x(g, k):  # left edge of object group g's column k (1-based)
+        return ROW_LABEL_PX + g * (group_w + GROUP_GAP_PX) + (k - 1) * CELL_PX
+
+    for g, object_name in enumerate(ORIENTATION_OBJECTS):
+        draw.text((column_x(g, 1) + group_w // 2, 40), object_name, font=font(44), fill=INK, anchor="mm")
+        for k, hex_color in enumerate(ORIENTATION_HAND_HEX, start=1):
+            cx, cy = column_x(g, k) + CELL_PX // 2, HEADER_PX - 36
+            draw.ellipse((cx - 30, cy - 12, cx - 6, cy + 12), fill=hex_color)
+            draw.text((cx + 2, cy), str(k), font=font(LABEL_PX), fill=INK_SOFT, anchor="lm")
+        if g:
+            x = column_x(g, 1) - GROUP_GAP_PX // 2
+            draw.line((x, HEADER_PX, x, height - PANEL_MARGIN), fill=SLOT_EDGE, width=3)
+    for r, subject in enumerate(subjects):
+        top = HEADER_PX + r * cell_h
+        draw.text((ROW_LABEL_PX // 2, top + cell_h // 2), f"P{r + 1}", font=font(LABEL_PX),
+                  fill=INK_SOFT, anchor="mm")
+        for g, object_name in enumerate(ORIENTATION_OBJECTS):
+            for k in (1, 2, 3):
+                image = Image.open(cells[subject, object_name, k]["png"]).convert("RGB")
+                image.thumbnail((CELL_PX, cell_h), Image.LANCZOS)
+                canvas.paste(image, (column_x(g, k) + (CELL_PX - image.width) // 2,
+                                     top + (cell_h - image.height) // 2))
+
+    diameter = round(min(BUBBLE_CELLS * CELL_PX, BUBBLE_ROWS * cell_h))
+    for g, object_name in enumerate(ORIENTATION_OBJECTS):
+        bubble = circular_crop(Image.open(bubbles[object_name]).convert("RGB"), diameter)
+        left = column_x(g, 2) + CELL_PX // 2 - diameter // 2
+        top = HEADER_PX + BUBBLE_TOP_GAP_PX
+        # A soft shadow under the bubble, so it reads as lying on top of the grid.
+        shadow = Image.new("L", canvas.size, 0)
+        ImageDraw.Draw(shadow).ellipse((left, top + 10, left + diameter, top + diameter + 10), fill=70)
+        shadow = shadow.filter(ImageFilter.GaussianBlur(14))
+        canvas.paste(Image.new("RGB", canvas.size, INK), mask=shadow)
+        mask = Image.new("L", (diameter, diameter), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, diameter - 1, diameter - 1), fill=255)
+        canvas.paste(bubble, (left, top), mask=mask)
+        draw.ellipse((left, top, left + diameter - 1, top + diameter - 1), outline=BUBBLE_EDGE, width=5)
+        draw.text((left + diameter // 2, top + diameter - 40), "P1, all three", font=font(28),
+                  fill=INK_SOFT, anchor="mm")
+    canvas.save(path)
+    print(f"  orientation grid: {width}x{height} px, {len(cells)} cells")
+
+
+def circular_crop(image, diameter):
+    """
+    A square around the image centre -- where the camera's target, the object's centre,
+    lands -- just large enough to hold everything drawn, scaled to `diameter`.
+    """
+    from PIL import Image
+
+    pixels = np.asarray(image).astype(int)
+    ink = np.abs(pixels - pixels[0, 0]).max(axis=-1) > 8
+    ys, xs = np.nonzero(ink)
+    cy, cx = image.height / 2, image.width / 2
+    radius = int(np.sqrt((ys - cy) ** 2 + (xs - cx) ** 2).max() * 1.08) + 8
+    # Pad with the background rather than crop, which would fill any overhang with black.
+    square = Image.new("RGB", (2 * radius, 2 * radius), tuple(int(v) for v in pixels[0, 0]))
+    square.paste(image, (radius - int(cx), radius - int(cy)))
+    return square.resize((diameter, diameter), Image.LANCZOS)
 
 
 # --------------------------------------------------------------------------- panels
@@ -623,7 +773,7 @@ def picks_for(row, n, sources):
         return pick_pose_gap(n)
     if row == "negatives":
         return pick_negatives(n)
-    return pick_orientation(n, sources)
+    return pick_orientation(ORIENTATION_ROWS, sources)  # one grid; n does not apply
 
 
 def parse_args():
