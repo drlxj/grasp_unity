@@ -6,6 +6,7 @@ Runs inside Blender, not the grasping env:
   blender -b --factory-startup --python render_grasps.py -- --scenes <dir> --out <dir>
           [--width 4000] [--samples 128] [--hand skeleton|skin] [--fov 20]
           [--rows level|packed] [--frame-cols 0 11] [--frame-rows 0 10] [--save-blend]
+          [--elevation 15] [--orbit 35] [--aspect 1.7778] [--first-row near|far]
 
 Each cell is its object in the object's default orientation with one grasp around it,
 so every column shows one object the same way round and the hands reaching it from
@@ -15,6 +16,12 @@ screen so nothing overlaps. Every object's bottom sits at one height, FLOOR_DROP
 shadow-catching floor. The camera frames the whole stage, or with --frame-cols and
 --frame-rows (0-based, end excluded) only those cells, the rest still in the scene.
 
+The grid is always square to the viewing azimuth the cells were chosen for, so every
+object faces its row the same way. The camera's own elevation sets how far apart the
+rows stand -- the lower it looks, the deeper the rows must be spaced to clear each
+other on screen -- and --orbit swings it round the stage from there, to look across
+the ranks at a slant.
+
 Writes <out>/stage.png, transparent but for the shadows; <out>/labels.json, the pixel
 position above each column where its title would go; and with --save-blend the scene
 itself, <out>/stage.blend, to take further by hand (a camera move, say).
@@ -23,6 +30,7 @@ import argparse
 import json
 import math
 import sys
+import time
 from pathlib import Path
 
 import bmesh
@@ -146,9 +154,9 @@ def add_lights(camera_azimuth):
         look_at(obj, direction(camera_azimuth + spec["azimuth"], spec["elevation"]))
 
 
-def add_floor(height):
+def add_floor(height, centre):
     """A shadow catcher: invisible itself, it leaves only the shadows in the alpha."""
-    bpy.ops.mesh.primitive_plane_add(size=30.0, location=(0, 0, height))
+    bpy.ops.mesh.primitive_plane_add(size=400.0, location=(centre[0], centre[1], height))
     floor = bpy.context.active_object
     floor.name = "Floor"
     floor.is_shadow_catcher = True
@@ -205,24 +213,62 @@ def add_object(npz_path, rot, trans, mat):
     return obj
 
 
+_TEMPLATES = {}
+
+
+def template(kind):
+    """
+    A unit sphere or a unit cylinder (radius 1, height 1 along z, centred), as vertices
+    (n, 3), flat face indices and face sizes. Built once with bmesh and then copied with
+    numpy: bmesh's own create ops slow down as the mesh they add to grows, and a stage
+    needs ~70,000 of them.
+    """
+    if kind not in _TEMPLATES:
+        bm = bmesh.new()
+        if kind == "sphere":
+            bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=1.0)
+        else:
+            bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=1.0, radius2=1.0, depth=1.0)
+        verts = np.array([v.co for v in bm.verts])
+        faces = [[v.index for v in f.verts] for f in bm.faces]
+        bm.free()
+        _TEMPLATES[kind] = (verts, np.concatenate(faces), np.array([len(f) for f in faces]))
+    return _TEMPLATES[kind]
+
+
+def instanced_mesh(name, kind, transforms):
+    """One mesh holding a copy of the template under each 4x4 transform."""
+    verts, loops, sizes = template(kind)
+    transforms = np.asarray(transforms)
+    co = np.einsum("kij,nj->kni", transforms[:, :3, :3], verts) + transforms[:, None, :3, 3]
+    n = len(transforms)
+    loops = (loops[None] + len(verts) * np.arange(n)[:, None]).ravel()
+    sizes = np.tile(sizes, n)
+
+    mesh = bpy.data.meshes.new(name)
+    mesh.vertices.add(n * len(verts))
+    mesh.vertices.foreach_set("co", co.ravel())
+    mesh.loops.add(len(loops))
+    mesh.loops.foreach_set("vertex_index", loops.astype(np.int32))
+    mesh.polygons.add(len(sizes))
+    mesh.polygons.foreach_set("loop_start", np.concatenate([[0], np.cumsum(sizes)[:-1]]).astype(np.int32))
+    mesh.update(calc_edges=True)
+    return mesh
+
+
 def add_skeleton(hand, skeleton, joint_radius, bone_radius, joint_mat, bone_mat):
     """Spheres at the joints and cylinders along the bones, one mesh each."""
     points = [Y_UP_TO_Z_UP @ Vector(p) for p in hand]
-
-    bm = bmesh.new()
-    for p in points:
-        bmesh.ops.create_uvsphere(bm, u_segments=20, v_segments=10, radius=joint_radius,
-                                  matrix=Matrix.Translation(p))
-    joints = link_mesh("Joints", bm, joint_mat)
-
-    bm = bmesh.new()
+    spheres = [np.array(Matrix.Translation(p) @ Matrix.Scale(joint_radius, 4)) for p in points]
+    cylinders = []
     for a, b in skeleton:
         pa, pb = points[a], points[b]
         axis = pb - pa
+        scale = Matrix.Diagonal((bone_radius, bone_radius, axis.length, 1.0))
         orient = axis.to_track_quat("Z", "Y").to_matrix().to_4x4()
-        bmesh.ops.create_cone(bm, cap_ends=True, segments=16, radius1=bone_radius, radius2=bone_radius,
-                              depth=axis.length, matrix=Matrix.Translation((pa + pb) / 2) @ orient)
-    return [joints, link_mesh("Bones", bm, bone_mat)]
+        cylinders.append(np.array(Matrix.Translation((pa + pb) / 2) @ orient @ scale))
+    return [link_mesh("Joints", instanced_mesh("Joints", "sphere", spheres), joint_mat),
+            link_mesh("Bones", instanced_mesh("Bones", "cylinder", cylinders), bone_mat)]
 
 
 # The skin: no MANO, just the 21 joints. Every bone becomes a metaball capsule, and
@@ -381,7 +427,7 @@ def skyline_step(a_along, a_across, b_along, b_across, gap):
     return step + gap
 
 
-def lay_out(grid, clusters, view, elevation_deg, level_rows):
+def lay_out(grid, clusters, view, elevation_deg, level_rows, near_first):
     """
     Offsets that set the cells out on the floor, and each column's centre on screen.
 
@@ -391,6 +437,7 @@ def lay_out(grid, clusters, view, elevation_deg, level_rows):
     largest any column needs, so rows run straight across the stage; without, each
     column is packed on its own. Then columns, each as close to the last as the two
     columns' whole silhouettes allow, plus CLUSTER_GAP where the cluster changes.
+    Row 1 stands furthest back, or with near_first, at the front.
 
     Rows step across the floor away from the viewer, and a step d that way moves a
     point d * sin(elevation) up the screen. Spacing is solved on an orthographic view
@@ -400,18 +447,20 @@ def lay_out(grid, clusters, view, elevation_deg, level_rows):
     sx = [[pts @ right for pts in col] for col in grid]
     sy = [[pts @ up for pts in col] for col in grid]
 
-    def row_step(c, r):  # downwards, along -up
-        return skyline_step(-sy[c][r - 1], sx[c][r - 1], -sy[c][r], sx[c][r], ROW_GAP)
+    sign = 1.0 if near_first else -1.0  # each row further up the screen, or further down
+
+    def row_step(c, r):
+        return skyline_step(sign * sy[c][r - 1], sx[c][r - 1], sign * sy[c][r], sx[c][r], ROW_GAP)
 
     if level_rows:
         n_rows = max(len(col) for col in grid)
         steps = [max(row_step(c, r) for c in range(len(grid)) if len(grid[c]) > r) for r in range(1, n_rows)]
-        ys = [[-sum(steps[:r]) for r in range(len(col))] for col in grid]
+        ys = [[sign * sum(steps[:r]) for r in range(len(col))] for col in grid]
     else:
         ys = []
         for c, col in enumerate(grid):
             steps = [row_step(c, r) for r in range(1, len(col))]
-            ys.append([-sum(steps[:r]) for r in range(len(col))])
+            ys.append([sign * sum(steps[:r]) for r in range(len(col))])
 
     xs = [0.0]
     for c in range(1, len(grid)):
@@ -464,6 +513,11 @@ def parse_args():
     p.add_argument("--frame-cols", nargs=2, type=int, metavar=("START", "END"))
     p.add_argument("--frame-rows", nargs=2, type=int, metavar=("START", "END"))
     p.add_argument("--save-blend", action="store_true")
+    p.add_argument("--elevation", type=float, help="camera elevation in degrees (default: the scene's)")
+    p.add_argument("--orbit", type=float, default=0.0,
+                   help="degrees the camera swings round the stage from the grid's own azimuth")
+    p.add_argument("--aspect", type=float, help="frame width over height (default: fit the framed cells)")
+    p.add_argument("--first-row", choices=("far", "near"), default="far")
     return p.parse_args(argv)
 
 
@@ -475,11 +529,18 @@ def main():
     spec = json.loads((args.scenes / "scene.json").read_text(encoding="utf-8"))
     args.out.mkdir(parents=True, exist_ok=True)
 
+    started = time.perf_counter()
+
+    def elapsed():
+        return f"{time.perf_counter() - started:.0f}s"
+
     scene = reset_scene(args.samples)
     mats = dict(obj=material("Object", OBJECT_HEX, 0.55, 0.3), bone=material("Bone", BONE_HEX, 0.35),
                 joint=material("Joint", JOINT_HEX, 0.3), skin=skin_material())
-    azimuth, elevation = spec["camera"]["azimuth"], spec["camera"]["elevation"]
-    view = direction(azimuth, elevation)  # from the stage towards the camera
+    azimuth = spec["camera"]["azimuth"]
+    elevation = spec["camera"]["elevation"] if args.elevation is None else args.elevation
+    grid_view = direction(azimuth, elevation)  # the grid is laid out square to this
+    view = direction(azimuth + args.orbit, elevation)  # from the stage towards the camera
     right, up = screen_axes(view)
 
     empties, grid = [], []
@@ -491,15 +552,17 @@ def main():
                                        args.scenes, mats, args.hand)
             empties[-1].append(empty)
             grid[-1].append(points)
-        print(f"BUILT {column['object']}", flush=True)
+        print(f"BUILT {column['object']} ({elapsed()})", flush=True)
 
     clusters = [column.get("cluster", 0) for column in spec["columns"]]
-    offsets, centres, top = lay_out(grid, clusters, view, elevation, args.rows == "level")
+    offsets, centres, top = lay_out(grid, clusters, grid_view, elevation, args.rows == "level",
+                                    args.first_row == "near")
     for col_empties, col_offsets in zip(empties, offsets):
         for empty, offset in zip(col_empties, col_offsets):
             empty.location = Vector(offset)
-    add_floor(-FLOOR_DROP)
-    add_lights(azimuth)
+    print(f"LAID OUT ({elapsed()})", flush=True)
+    add_floor(-FLOOR_DROP, np.mean([o for col in offsets for o in col], axis=0))
+    add_lights(azimuth + args.orbit)
 
     # Frame the chosen cells and, straight below them, the floor their shadows fall on.
     cols = range(*args.frame_cols) if args.frame_cols else range(len(grid))
@@ -508,14 +571,14 @@ def main():
     shadows = placed.copy()
     shadows[:, 2] = -FLOOR_DROP
     framed = np.vstack([placed, shadows])
-    aspect = np.ptp(framed @ right) / np.ptp(framed @ up)
+    aspect = args.aspect or np.ptp(framed @ right) / np.ptp(framed @ up)
     scene.render.resolution_x = args.width
     scene.render.resolution_y = round(args.width / aspect)
     cam_data = bpy.data.cameras.new("Camera")
     cam_data.sensor_fit = "VERTICAL"
     cam_data.angle_y = math.radians(args.fov)
     cam_data.clip_start = 0.01
-    cam_data.clip_end = 100.0
+    cam_data.clip_end = 1000.0
     camera = bpy.data.objects.new("Camera", cam_data)
     scene.collection.objects.link(camera)
     target, distance = fit_camera(framed, view, args.fov, aspect)
@@ -527,8 +590,9 @@ def main():
     # lay_out leaves in place across the screen, unmoved up or down it).
     width, height = scene.render.resolution_x, scene.render.resolution_y
     labels = []
+    grid_right, grid_up = screen_axes(grid_view)
     for column, centre in zip(spec["columns"], centres):
-        anchor = Vector(right * centre + up * top)
+        anchor = Vector(grid_right * centre + grid_up * top)
         u, v, _ = world_to_camera_view(scene, camera, anchor)
         labels.append(dict(title=column["object"], x=u * width, y=(1 - v) * height))
     (args.out / "labels.json").write_text(json.dumps(labels, indent=1), encoding="utf-8")
@@ -537,7 +601,7 @@ def main():
         bpy.ops.wm.save_as_mainfile(filepath=str(args.out / "stage.blend"), compress=True)
     scene.render.filepath = str(args.out / "stage.png")
     bpy.ops.render.render(write_still=True)
-    print(f"RENDERED stage.png {width}x{height}", flush=True)
+    print(f"RENDERED stage.png {width}x{height} ({elapsed()})", flush=True)
 
 
 if __name__ == "__main__":

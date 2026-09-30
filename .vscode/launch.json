@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug preprocess_all_dataset",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/model/preprocess_all_dataset.py",
+            // The script resolves ../dataset/ORG_dataset and ./files/bps_new.npz against the cwd.
+            "cwd": "${workspaceFolder}/model",
+            "python": "D:/LinuxVirtual/envs/grasping/python.exe",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
